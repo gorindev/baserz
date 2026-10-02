@@ -1,0 +1,25 @@
+@page "/components/avatar"
+
+<PageTitle>Avatar - BaseRz</PageTitle>
+
+<h1>Avatar</h1>
+<p>
+    <code>BaseAvatarImage</code> reports its loading status to the root. <code>BaseAvatarFallback</code> is shown until
+    the image loads, is <code>aria-hidden</code> while loading, and takes over on error.
+</p>
+
+<div class="d-flex gap-3 align-items-center">
+    <BaseAvatarRoot class="demo-avatar">
+        <BaseAvatarImage Src="icon-192.png" Alt="BaseRz logo" />
+        <BaseAvatarFallback>BR</BaseAvatarFallback>
+    </BaseAvatarRoot>
+
+    <BaseAvatarRoot class="demo-avatar">
+        <BaseAvatarImage Src="does-not-exist.png" Alt="Ada Lovelace" />
+        <BaseAvatarFallback>AL</BaseAvatarFallback>
+    </BaseAvatarRoot>
+
+    <BaseAvatarRoot class="demo-avatar">
+        <BaseAvatarFallback>GH</BaseAvatarFallback>
+    </BaseAvatarRoot>
+</div>

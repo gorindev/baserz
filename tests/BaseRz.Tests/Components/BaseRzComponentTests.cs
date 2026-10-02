@@ -7,9 +7,6 @@ namespace BaseRz.Tests.Components;
 
 public class BaseRzComponentTests : BaseRzTestContext
 {
-    private static readonly string[] ForbiddenClassFragments =
-        ["flex", "bg-", "text-", "rounded-", "p-", "gap-", "border-", "shadow-", "hover:", "data-["];
-
     [Fact]
     public void As_OverridesDefaultElement()
     {
@@ -33,7 +30,7 @@ public class BaseRzComponentTests : BaseRzTestContext
         var element = withoutClass.Find("div");
         Assert.False(element.HasAttribute("class"));
         var markup = withoutClass.Markup;
-        Assert.DoesNotContain(ForbiddenClassFragments, fragment => markup.Contains($"class=\"{fragment}", StringComparison.Ordinal));
+        Assert.DoesNotContain(HeadlessAssert.ForbiddenClassFragments, fragment => markup.Contains($"class=\"{fragment}", StringComparison.Ordinal));
     }
 
     [Fact]

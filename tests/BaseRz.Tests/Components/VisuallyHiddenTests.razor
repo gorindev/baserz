@@ -1,0 +1,58 @@
+@inherits BaseRzTestContext
+
+@code {
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(@<BaseVisuallyHiddenRoot>Close</BaseVisuallyHiddenRoot>);
+
+        Assert.Equal("Close", cut.Find("span").TextContent);
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var withClass = Render(@<BaseVisuallyHiddenRoot class="caller">x</BaseVisuallyHiddenRoot>);
+        Assert.Equal("caller", withClass.Find("span").GetAttribute("class"));
+        HeadlessAssert.AssertOnlyCallerClasses(withClass.Markup, "caller");
+
+        var bare = Render(@<BaseVisuallyHiddenRoot>x</BaseVisuallyHiddenRoot>);
+        Assert.False(bare.Find("span").HasAttribute("class"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(@<BaseVisuallyHiddenRoot id="vh" data-test="probe" aria-label="Probe">x</BaseVisuallyHiddenRoot>);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("span"), "vh");
+    }
+
+    [Fact]
+    public void VisuallyHidden_IsNotVisibleToAT_ButRemainsInA11yTree()
+    {
+        var cut = Render(@<BaseVisuallyHiddenRoot style="color: red">Search</BaseVisuallyHiddenRoot>);
+        var span = cut.Find("span");
+        var style = span.GetAttribute("style")!;
+
+        Assert.Contains("position: absolute", style);
+        Assert.Contains("width: 1px", style);
+        Assert.Contains("height: 1px", style);
+        Assert.Contains("overflow: hidden", style);
+        Assert.Contains("clip: rect(0, 0, 0, 0)", style);
+        Assert.Contains("white-space: nowrap", style);
+        Assert.EndsWith("color: red", style);
+        Assert.DoesNotContain("display: none", style);
+        Assert.DoesNotContain("visibility: hidden", style);
+        Assert.False(span.HasAttribute("aria-hidden"));
+        Assert.Equal("Search", span.TextContent);
+    }
+
+    [Fact]
+    public void As_ChangesElement()
+    {
+        var cut = Render(@<BaseVisuallyHiddenRoot As="div">x</BaseVisuallyHiddenRoot>);
+
+        Assert.Equal("DIV", cut.Find("[style]").TagName);
+    }
+}

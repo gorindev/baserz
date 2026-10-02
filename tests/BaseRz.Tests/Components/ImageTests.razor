@@ -1,0 +1,81 @@
+@inherits BaseRzTestContext
+
+@code {
+    private static RenderFragment Image(string? src, string? imageClass = null) =>
+        @<BaseImageRoot Src="@src" Alt="Mountains" class="@imageClass">
+            <LoadingContent><span id="loading">Loading</span></LoadingContent>
+            <ErrorContent><span id="error">Could not load</span></ErrorContent>
+        </BaseImageRoot>;
+
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(Image("m.png"));
+
+        var img = cut.Find("img");
+        Assert.Equal("m.png", img.GetAttribute("src"));
+        Assert.Equal("Mountains", img.GetAttribute("alt"));
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(Image("m.png", "photo"));
+
+        Assert.Equal("photo", cut.Find("img").GetAttribute("class"));
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "photo");
+        Assert.False(Render(Image("m.png")).Find("img").HasAttribute("class"));
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var cut = Render(Image("m.png"));
+        Assert.Equal("loading", cut.Find("img").GetAttribute("data-state"));
+
+        cut.Find("img").TriggerEvent("onload", new ProgressEventArgs());
+        Assert.Equal("loaded", cut.Find("img").GetAttribute("data-state"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(@<BaseImageRoot Src="m.png" id="im" data-test="probe" aria-label="Probe" />);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("img"), "im");
+    }
+
+    [Fact]
+    public void Image_LoadingAndErrorSlots()
+    {
+        var loaded = Render(Image("m.png"));
+        Assert.NotNull(loaded.Find("#loading"));
+        Assert.Empty(loaded.FindAll("#error"));
+
+        loaded.Find("img").TriggerEvent("onload", new ProgressEventArgs());
+        Assert.Empty(loaded.FindAll("#loading"));
+        Assert.Empty(loaded.FindAll("#error"));
+        Assert.NotNull(loaded.Find("img"));
+
+        var failed = Render(Image("broken.png"));
+        failed.Find("img").TriggerEvent("onerror", new Microsoft.AspNetCore.Components.Web.ErrorEventArgs());
+        Assert.Empty(failed.FindAll("img"));
+        Assert.Empty(failed.FindAll("#loading"));
+        Assert.NotNull(failed.Find("#error"));
+
+        var missing = Render(Image(null));
+        Assert.Empty(missing.FindAll("img"));
+        Assert.NotNull(missing.Find("#error"));
+    }
+
+    [Fact]
+    public void Image_SrcChange_ResetsToLoading()
+    {
+        var cut = Render<BaseImageRoot>(parameters => parameters.Add(p => p.Src, "broken.png"));
+        cut.Find("img").TriggerEvent("onerror", new Microsoft.AspNetCore.Components.Web.ErrorEventArgs());
+        Assert.Empty(cut.FindAll("img"));
+
+        cut.Render(parameters => parameters.Add(p => p.Src, "m.png"));
+        Assert.Equal("loading", cut.Find("img").GetAttribute("data-state"));
+    }
+}

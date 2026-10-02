@@ -1,0 +1,20 @@
+@page "/components"
+
+<PageTitle>Components - BaseRz</PageTitle>
+
+<h1>Components</h1>
+
+<p>
+    P1 static and simple primitives. Each page passes Bootstrap classes through <code>class</code> purely as demo
+    chrome; the components themselves emit only ARIA, <code>data-*</code> state, and the caller's class.
+</p>
+
+<ul class="list-group">
+    @foreach (var entry in SampleCatalog.P1)
+    {
+        <li class="list-group-item">
+            <a href="@entry.Route" class="fw-semibold">@entry.Name</a>
+            <div class="small text-muted">@entry.Summary</div>
+        </li>
+    }
+</ul>

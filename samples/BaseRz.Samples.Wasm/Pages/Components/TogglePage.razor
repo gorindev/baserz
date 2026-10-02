@@ -1,0 +1,25 @@
+@page "/components/toggle"
+
+<PageTitle>Toggle - BaseRz</PageTitle>
+
+<h1>Toggle</h1>
+<p><code>BaseToggleRoot</code> is a button with <code>aria-pressed</code> and <code>data-state="on|off"</code>.</p>
+
+<div class="d-flex gap-2 align-items-center mb-2">
+    <BaseToggleRoot @bind-Pressed="_bold" aria-label="Bold" class="btn btn-outline-dark demo-toggle"><strong>B</strong></BaseToggleRoot>
+    <span>Controlled: <code>@(_bold ? "pressed" : "not pressed")</code></span>
+</div>
+
+<div class="d-flex gap-2 align-items-center mb-2">
+    <BaseToggleRoot DefaultPressed aria-label="Italic" class="btn btn-outline-dark demo-toggle"><em>I</em></BaseToggleRoot>
+    <span>Uncontrolled, <code>DefaultPressed</code></span>
+</div>
+
+<div class="d-flex gap-2 align-items-center">
+    <BaseToggleRoot Disabled aria-label="Underline" class="btn btn-outline-dark demo-toggle"><u>U</u></BaseToggleRoot>
+    <span>Disabled</span>
+</div>
+
+@code {
+    private bool _bold;
+}

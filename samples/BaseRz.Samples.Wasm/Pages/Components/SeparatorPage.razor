@@ -1,0 +1,23 @@
+@page "/components/separator"
+
+<PageTitle>Separator - BaseRz</PageTitle>
+
+<h1>Separator</h1>
+<p>
+    <code>BaseSeparatorRoot</code> renders <code>role="separator"</code> (or <code>role="none"</code> when
+    <code>Decorative</code>) and <code>data-orientation</code>. Child content makes it a labeled separator.
+</p>
+
+<p>Above the rule.</p>
+<BaseSeparatorRoot class="demo-separator" />
+<p>Below the rule.</p>
+
+<div class="d-flex align-items-center gap-2" style="height: 2rem">
+    <span>Blog</span>
+    <BaseSeparatorRoot Orientation="Orientation.Vertical" Decorative class="demo-separator" />
+    <span>Docs</span>
+    <BaseSeparatorRoot Orientation="Orientation.Vertical" Decorative class="demo-separator" />
+    <span>Source</span>
+</div>
+
+<BaseSeparatorRoot class="demo-separator demo-separator-labeled my-3">or continue with</BaseSeparatorRoot>

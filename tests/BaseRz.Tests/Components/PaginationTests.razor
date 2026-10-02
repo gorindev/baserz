@@ -1,0 +1,199 @@
+@inherits BaseRzTestContext
+
+@code {
+    private static RenderFragment Template(BasePaginationContext pagination) =>
+        @<BasePaginationList>
+            <BasePaginationItem><BasePaginationPrev /></BasePaginationItem>
+            @foreach (var item in pagination.Items)
+            {
+                <BasePaginationItem>
+                    @if (item is int page)
+                    {
+                        <BasePaginationLink Page="page" />
+                    }
+                    else
+                    {
+                        <BasePaginationEllipsis />
+                    }
+                </BasePaginationItem>
+            }
+            <BasePaginationItem><BasePaginationNext /></BasePaginationItem>
+        </BasePaginationList>;
+
+    private IRenderedComponent<BasePaginationRoot> RenderPagination(Action<ComponentParameterCollectionBuilder<BasePaginationRoot>> configure) =>
+        Render<BasePaginationRoot>(parameters =>
+        {
+            parameters.Add(p => p.ChildContent, (RenderFragment<BasePaginationContext>)Template);
+            configure(parameters);
+        });
+
+    private static string? CurrentPage(IRenderedComponent<BasePaginationRoot> cut) =>
+        cut.FindAll("[aria-current=page]").SingleOrDefault()?.TextContent;
+
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = RenderPagination(parameters => parameters.Add(p => p.PageCount, 10).Add(p => p.DefaultPage, 5));
+
+        Assert.NotNull(cut.Find("nav > ul > li"));
+        Assert.NotNull(cut.Find("button[aria-label='Previous page']"));
+        Assert.NotNull(cut.Find("button[aria-label='Next page']"));
+        Assert.Equal(5, cut.FindAll("li > button[data-state]").Count);
+        var ellipses = cut.FindAll("li > span[aria-hidden=true]");
+        Assert.Equal(2, ellipses.Count);
+        Assert.All(ellipses, static ellipsis => Assert.Equal("…", ellipsis.TextContent));
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(
+            @<BasePaginationRoot class="pager" PageCount="3">
+                <BasePaginationList class="pagination">
+                    <BasePaginationItem class="page-item"><BasePaginationLink class="page-link" Page="1" /></BasePaginationItem>
+                </BasePaginationList>
+            </BasePaginationRoot>);
+
+        Assert.Equal("pager", cut.Find("nav").GetAttribute("class"));
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "pager", "pagination", "page-item", "page-link");
+        Assert.Empty(RenderPagination(parameters => parameters.Add(p => p.PageCount, 10)).FindAll("[class]"));
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var cut = RenderPagination(parameters => parameters.Add(p => p.PageCount, 3).Add(p => p.DefaultPage, 2));
+        Assert.Equal("active", cut.Find("[aria-current=page]").GetAttribute("data-state"));
+        Assert.Equal(2, cut.FindAll("button[data-state=inactive]").Count);
+
+        var disabled = RenderPagination(parameters => parameters.Add(p => p.PageCount, 3).Add(p => p.Disabled, true));
+        Assert.True(disabled.Find("nav").HasAttribute("data-disabled"));
+        Assert.All(disabled.FindAll("button"), static button =>
+        {
+            Assert.True(button.HasAttribute("disabled"));
+            Assert.True(button.HasAttribute("data-disabled"));
+        });
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = RenderPagination(parameters => parameters
+            .Add(p => p.PageCount, 3)
+            .AddUnmatched("id", "pg")
+            .AddUnmatched("data-test", "probe")
+            .AddUnmatched("aria-label", "Probe"));
+
+        HeadlessAssert.AssertPassThrough(cut.Find("nav"), "pg");
+    }
+
+    [Fact]
+    public void Pagination_NavLabel_DefaultsToPagination()
+    {
+        var cut = RenderPagination(parameters => parameters.Add(p => p.PageCount, 3));
+
+        Assert.Equal("Pagination", cut.Find("nav").GetAttribute("aria-label"));
+    }
+
+    [Theory]
+    [InlineData(1, 10, 1, "1 2 … 10")]
+    [InlineData(3, 10, 1, "1 2 3 4 … 10")]
+    [InlineData(4, 10, 1, "1 2 3 4 5 … 10")]
+    [InlineData(5, 10, 1, "1 … 4 5 6 … 10")]
+    [InlineData(10, 10, 1, "1 … 9 10")]
+    [InlineData(5, 10, 0, "1 … 5 … 10")]
+    [InlineData(5, 10, 2, "1 2 3 4 5 6 7 … 10")]
+    [InlineData(1, 1, 1, "1")]
+    [InlineData(2, 3, 1, "1 2 3")]
+    [InlineData(99, 10, 1, "1 … 9 10")]
+    [InlineData(1, 0, 1, "")]
+    public void Pagination_SiblingEllipsisAlgorithm(int page, int pageCount, int siblingCount, string expected)
+    {
+        var items = BasePaginationRoot.Range(page, pageCount, siblingCount);
+
+        Assert.Equal(expected, string.Join(" ", items.Select(static item => item?.ToString() ?? "…")));
+    }
+
+    [Fact]
+    public void Pagination_RendersCurrentPage_PrevNextDisabledAtBounds()
+    {
+        var first = RenderPagination(parameters => parameters.Add(p => p.PageCount, 10));
+        Assert.Equal("1", CurrentPage(first));
+        Assert.True(first.Find("button[aria-label='Previous page']").HasAttribute("disabled"));
+        Assert.False(first.Find("button[aria-label='Next page']").HasAttribute("disabled"));
+
+        var last = RenderPagination(parameters => parameters.Add(p => p.PageCount, 10).Add(p => p.DefaultPage, 10));
+        Assert.Equal("10", CurrentPage(last));
+        Assert.False(last.Find("button[aria-label='Previous page']").HasAttribute("disabled"));
+        Assert.True(last.Find("button[aria-label='Next page']").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void Uncontrolled_Default()
+    {
+        var emitted = new List<int>();
+        var cut = RenderPagination(parameters => parameters
+            .Add(p => p.PageCount, 10)
+            .Add(p => p.DefaultPage, 5)
+            .Add(p => p.PageChanged, emitted.Add));
+        Assert.Equal("5", CurrentPage(cut));
+
+        cut.Render(parameters => parameters.Add(p => p.DefaultPage, 1));
+        Assert.Equal("5", CurrentPage(cut));
+
+        cut.Find("button[aria-label='Next page']").Click();
+        Assert.Equal("6", CurrentPage(cut));
+
+        cut.FindAll("button[data-state]").Single(static b => b.TextContent == "10").Click();
+        Assert.Equal("10", CurrentPage(cut));
+
+        cut.Find("button[aria-label='Previous page']").Click();
+        Assert.Equal("9", CurrentPage(cut));
+        Assert.Equal([6, 10, 9], emitted);
+    }
+
+    [Fact]
+    public void Controlled_Bind()
+    {
+        var parent = 1;
+        var emitted = new List<int>();
+        var cut = RenderPagination(parameters => parameters
+            .Add(p => p.PageCount, 5)
+            .Add(p => p.Page, parent)
+            .Add(p => p.PageChanged, value => { emitted.Add(value); parent = value; }));
+
+        cut.Find("button[aria-label='Next page']").Click();
+        Assert.Equal([2], emitted);
+        Assert.Equal("1", CurrentPage(cut));
+
+        cut.Render(parameters => parameters.Add(p => p.Page, parent));
+        Assert.Equal("2", CurrentPage(cut));
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        var emitted = new List<int>();
+        var cut = RenderPagination(parameters => parameters
+            .Add(p => p.PageCount, 5)
+            .Add(p => p.Disabled, true)
+            .Add(p => p.PageChanged, emitted.Add));
+
+        cut.Find("button[aria-label='Next page']").Click();
+        cut.FindAll("button[data-state]").Single(static b => b.TextContent == "2").Click();
+
+        Assert.Empty(emitted);
+        Assert.Equal("1", CurrentPage(cut));
+    }
+
+    [Fact]
+    public void Pagination_ActiveLinkClick_DoesNotEmit()
+    {
+        var emitted = new List<int>();
+        var cut = RenderPagination(parameters => parameters.Add(p => p.PageCount, 5).Add(p => p.PageChanged, emitted.Add));
+
+        cut.Find("[aria-current=page]").Click();
+
+        Assert.Empty(emitted);
+    }
+}

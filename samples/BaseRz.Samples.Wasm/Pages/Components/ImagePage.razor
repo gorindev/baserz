@@ -1,0 +1,28 @@
+@page "/components/image"
+
+<PageTitle>Image - BaseRz</PageTitle>
+
+<h1>Image</h1>
+<p><code>BaseImageRoot</code> renders an <code>&lt;img&gt;</code> with <code>data-state</code> plus <code>LoadingContent</code> and <code>ErrorContent</code> slots.</p>
+
+<div class="d-flex gap-4">
+    <figure>
+        <BaseImageRoot Src="icon-192.png" Alt="BaseRz logo" class="demo-image" OnLoadingStatusChange="status => _status = status">
+            <LoadingContent><span class="text-muted">Loading…</span></LoadingContent>
+            <ErrorContent><span class="text-danger">Could not load image.</span></ErrorContent>
+        </BaseImageRoot>
+        <figcaption class="small text-muted">Status: @_status.ToDataState()</figcaption>
+    </figure>
+
+    <figure>
+        <BaseImageRoot Src="missing.png" Alt="Missing" class="demo-image">
+            <LoadingContent><span class="text-muted">Loading…</span></LoadingContent>
+            <ErrorContent><span class="text-danger">Could not load image.</span></ErrorContent>
+        </BaseImageRoot>
+        <figcaption class="small text-muted">Broken source</figcaption>
+    </figure>
+</div>
+
+@code {
+    private ImageLoadingStatus _status = ImageLoadingStatus.Loading;
+}

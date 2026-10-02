@@ -1,0 +1,104 @@
+@inherits BaseRzTestContext
+
+@code {
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(
+            @<BaseAlertRoot>
+                <BaseAlertTitle>Heads up</BaseAlertTitle>
+                <BaseAlertDescription>You can add components.</BaseAlertDescription>
+            </BaseAlertRoot>);
+
+        var root = cut.Find("[role=alert]");
+        Assert.Equal("DIV", root.TagName);
+        Assert.Equal("H5", root.Children[0].TagName);
+        Assert.Equal("DIV", root.Children[1].TagName);
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(
+            @<BaseAlertRoot class="alert">
+                <BaseAlertTitle class="alert-heading">T</BaseAlertTitle>
+                <BaseAlertDescription>D</BaseAlertDescription>
+            </BaseAlertRoot>);
+
+        Assert.Equal("alert", cut.Find("[role=alert]").GetAttribute("class"));
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "alert", "alert-heading");
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(@<BaseAlertRoot id="a1" data-test="probe" aria-label="Probe" />);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("[role=alert]"), "a1");
+    }
+
+    [Fact]
+    public void Alert_RoleAlert_TitleAndDescriptionParts()
+    {
+        var cut = Render(
+            @<BaseAlertRoot>
+                <BaseAlertTitle>Heads up</BaseAlertTitle>
+                <BaseAlertDescription>You can add components.</BaseAlertDescription>
+            </BaseAlertRoot>);
+
+        var root = cut.Find("[role=alert]");
+        var title = cut.Find("h5");
+        var description = root.Children[1];
+
+        Assert.False(string.IsNullOrEmpty(title.Id));
+        Assert.False(string.IsNullOrEmpty(description.Id));
+        Assert.NotEqual(title.Id, description.Id);
+        Assert.Equal(title.Id, root.GetAttribute("aria-labelledby"));
+        Assert.Equal(description.Id, root.GetAttribute("aria-describedby"));
+    }
+
+    [Fact]
+    public void Alert_WithoutParts_OmitsLabelledByAndDescribedBy()
+    {
+        var root = Render(@<BaseAlertRoot>Plain message</BaseAlertRoot>).Find("[role=alert]");
+
+        Assert.False(root.HasAttribute("aria-labelledby"));
+        Assert.False(root.HasAttribute("aria-describedby"));
+    }
+
+    [Fact]
+    public void Alert_CallerIdsOnParts_AreUsedForWiring()
+    {
+        var cut = Render(
+            @<BaseAlertRoot>
+                <BaseAlertTitle id="t" As="strong">Heads up</BaseAlertTitle>
+                <BaseAlertDescription id="d">Body</BaseAlertDescription>
+            </BaseAlertRoot>);
+
+        var root = cut.Find("[role=alert]");
+        Assert.Equal("t", root.GetAttribute("aria-labelledby"));
+        Assert.Equal("d", root.GetAttribute("aria-describedby"));
+        Assert.Equal("STRONG", cut.Find("#t").TagName);
+    }
+
+    [Fact]
+    public void Alert_RemovingTitle_UnwiresLabelledBy()
+    {
+        var showTitle = true;
+        var cut = Render<BaseAlertRoot>(parameters => parameters.Add(p => p.ChildContent, Content(showTitle)));
+        Assert.True(cut.Find("[role=alert]").HasAttribute("aria-labelledby"));
+
+        showTitle = false;
+        cut.Render(parameters => parameters.Add(p => p.ChildContent, Content(showTitle)));
+        Assert.False(cut.Find("[role=alert]").HasAttribute("aria-labelledby"));
+    }
+
+    private static RenderFragment Content(bool showTitle) =>
+        @<text>
+            @if (showTitle)
+            {
+                <BaseAlertTitle>Heads up</BaseAlertTitle>
+            }
+            <BaseAlertDescription>Body</BaseAlertDescription>
+        </text>;
+}

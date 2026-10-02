@@ -1,0 +1,124 @@
+@inherits BaseRzTestContext
+
+@code {
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(@<BaseToggleRoot>Bold</BaseToggleRoot>);
+
+        var button = cut.Find("button");
+        Assert.Equal("button", button.GetAttribute("type"));
+        Assert.Equal("Bold", button.TextContent);
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(@<BaseToggleRoot class="toggle">Bold</BaseToggleRoot>);
+
+        Assert.Equal("toggle", cut.Find("button").GetAttribute("class"));
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "toggle");
+        Assert.False(Render(@<BaseToggleRoot>Bold</BaseToggleRoot>).Find("button").HasAttribute("class"));
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var off = Render(@<BaseToggleRoot>Bold</BaseToggleRoot>).Find("button");
+        Assert.Equal("off", off.GetAttribute("data-state"));
+        Assert.False(off.HasAttribute("data-disabled"));
+
+        var on = Render(@<BaseToggleRoot DefaultPressed Disabled>Bold</BaseToggleRoot>).Find("button");
+        Assert.Equal("on", on.GetAttribute("data-state"));
+        Assert.True(on.HasAttribute("data-disabled"));
+        Assert.True(on.HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(@<BaseToggleRoot id="bold" data-test="probe" aria-label="Probe">B</BaseToggleRoot>);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("button"), "bold");
+    }
+
+    [Fact]
+    public void Toggle_AriaPressed_ControlledAndDefaultPressed()
+    {
+        var uncontrolled = Render(@<BaseToggleRoot>Bold</BaseToggleRoot>);
+        Assert.Equal("false", uncontrolled.Find("button").GetAttribute("aria-pressed"));
+        uncontrolled.Find("button").Click();
+        Assert.Equal("true", uncontrolled.Find("button").GetAttribute("aria-pressed"));
+
+        var seeded = Render(@<BaseToggleRoot DefaultPressed>Bold</BaseToggleRoot>);
+        Assert.Equal("true", seeded.Find("button").GetAttribute("aria-pressed"));
+
+        var controlled = Render<BaseToggleRoot>(parameters => parameters.Add(p => p.Pressed, true));
+        Assert.Equal("true", controlled.Find("button").GetAttribute("aria-pressed"));
+    }
+
+    [Fact]
+    public void Controlled_Bind()
+    {
+        var parent = false;
+        var emitted = new List<bool>();
+        var cut = Render<BaseToggleRoot>(parameters => parameters
+            .Add(p => p.Pressed, parent)
+            .Add(p => p.PressedChanged, value => { emitted.Add(value); parent = value; }));
+
+        cut.Find("button").Click();
+        Assert.Equal([true], emitted);
+        Assert.Equal("false", cut.Find("button").GetAttribute("aria-pressed"));
+
+        cut.Render(parameters => parameters
+            .Add(p => p.Pressed, parent)
+            .Add(p => p.PressedChanged, value => { emitted.Add(value); parent = value; }));
+        Assert.Equal("true", cut.Find("button").GetAttribute("aria-pressed"));
+        Assert.Equal("on", cut.Find("button").GetAttribute("data-state"));
+    }
+
+    [Fact]
+    public void Uncontrolled_Default()
+    {
+        var emitted = new List<bool>();
+        var cut = Render<BaseToggleRoot>(parameters => parameters
+            .Add(p => p.DefaultPressed, true)
+            .Add(p => p.PressedChanged, emitted.Add));
+
+        cut.Render(parameters => parameters.Add(p => p.DefaultPressed, false).Add(p => p.PressedChanged, emitted.Add));
+        Assert.Equal("true", cut.Find("button").GetAttribute("aria-pressed"));
+
+        cut.Find("button").Click();
+        Assert.Equal("false", cut.Find("button").GetAttribute("aria-pressed"));
+        Assert.Equal([false], emitted);
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        var cut = Render(@<BaseToggleRoot Disabled>Bold</BaseToggleRoot>);
+
+        cut.Find("button").Click();
+        Assert.Equal("false", cut.Find("button").GetAttribute("aria-pressed"));
+
+        var asDiv = Render(@<BaseToggleRoot As="div" Disabled>Bold</BaseToggleRoot>);
+        asDiv.Find("div").KeyDown(Keys.Space);
+        asDiv.Find("div").KeyDown(Keys.Enter);
+        Assert.Equal("false", asDiv.Find("div").GetAttribute("aria-pressed"));
+        Assert.Equal("true", asDiv.Find("div").GetAttribute("aria-disabled"));
+    }
+
+    [Fact]
+    public void Toggle_NonButtonElement_RoleButton_TogglesOnEnterAndSpace()
+    {
+        var cut = Render(@<BaseToggleRoot As="span">Bold</BaseToggleRoot>);
+        var span = cut.Find("span");
+        Assert.Equal("button", span.GetAttribute("role"));
+        Assert.Equal("0", span.GetAttribute("tabindex"));
+
+        cut.Find("span").KeyDown(Keys.Enter);
+        Assert.Equal("true", cut.Find("span").GetAttribute("aria-pressed"));
+        cut.Find("span").KeyDown(Keys.Space);
+        Assert.Equal("false", cut.Find("span").GetAttribute("aria-pressed"));
+    }
+}

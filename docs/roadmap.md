@@ -129,44 +129,44 @@ No overlay, no roving-focus engine. Parts that are mostly markup + a little stat
 | **BaseBreadcrumb** (Root, List, Item, Link, Page, Separator) | **New** | `nav` + `aria-label`; current page `aria-current="page"`. |
 | **BasePagination** (Root, List, Item, Link, Prev, Next, Ellipsis) | **Port from:** `ShadRz/Base/Pagination.cs` | Port sibling/ellipsis algorithm. Unstyled parts instead of ShadRz `Button` + SVG. |
 
-- [ ] BaseVisuallyHidden
-- [ ] BaseSeparator
-- [ ] BaseLabel
-- [ ] BaseAspectRatio
-- [ ] BaseButton
-- [ ] BaseToggle
-- [ ] BaseAlert
-- [ ] BaseAvatar
-- [ ] BaseImage
-- [ ] BaseProgress
-- [ ] BaseTable
-- [ ] BaseBreadcrumb
-- [ ] BasePagination
+- [x] BaseVisuallyHidden
+- [x] BaseSeparator
+- [x] BaseLabel
+- [x] BaseAspectRatio
+- [x] BaseButton
+- [x] BaseToggle
+- [x] BaseAlert
+- [x] BaseAvatar
+- [x] BaseImage
+- [x] BaseProgress
+- [x] BaseTable
+- [x] BaseBreadcrumb
+- [x] BasePagination
 
 ### Tests (write first)
 
 Default red suite for each P1 component, plus:
 
-- [ ] `VisuallyHidden_IsNotVisibleToAT_ButRemainsInA11yTree` (`aria`/clip, not `display:none` without an accessible name strategy).
-- [ ] `Separator_RoleAndOrientation`; decorative vs labeled.
-- [ ] `Label_For_AssociatesControl`.
-- [ ] `AspectRatio_ParsesRatio_SetsInlineAspectRatio`; invalid ratio does not throw unhandled.
-- [ ] `Button_NonButtonElement_ActivatesOnEnterAndSpace`; `aria-disabled`/`aria-busy`; disabled skips `OnClick`.
-- [ ] `Toggle_AriaPressed_ControlledAndDefaultPressed`.
-- [ ] `Alert_RoleAlert_TitleAndDescriptionParts`.
-- [ ] `Avatar_ImageError_ShowsFallback_HidesFallbackWhenLoaded`; `BaseAvatarImage` is a separate part.
-- [ ] `Image_LoadingAndErrorSlots`.
-- [ ] `Progress_RoleProgressbar_ValuenowMinMax_IndeterminateOmitsValuenow`.
-- [ ] `Table_RendersSemanticTags_CaptionTheadTbodyTfoot`.
-- [ ] `Breadcrumb_NavLabel_CurrentPageAriaCurrent`.
-- [ ] `Pagination_SiblingEllipsisAlgorithm` (page 1, middle, last; `SiblingCount`).
+- [x] `VisuallyHidden_IsNotVisibleToAT_ButRemainsInA11yTree` (`aria`/clip, not `display:none` without an accessible name strategy).
+- [x] `Separator_RoleAndOrientation`; decorative vs labeled.
+- [x] `Label_For_AssociatesControl`.
+- [x] `AspectRatio_ParsesRatio_SetsInlineAspectRatio`; invalid ratio does not throw unhandled.
+- [x] `Button_NonButtonElement_ActivatesOnEnterAndSpace`; `aria-disabled`/`aria-busy`; disabled skips `OnClick`.
+- [x] `Toggle_AriaPressed_ControlledAndDefaultPressed`.
+- [x] `Alert_RoleAlert_TitleAndDescriptionParts`.
+- [x] `Avatar_ImageError_ShowsFallback_HidesFallbackWhenLoaded`; `BaseAvatarImage` is a separate part.
+- [x] `Image_LoadingAndErrorSlots`.
+- [x] `Progress_RoleProgressbar_ValuenowMinMax_IndeterminateOmitsValuenow`.
+- [x] `Table_RendersSemanticTags_CaptionTheadTbodyTfoot`.
+- [x] `Breadcrumb_NavLabel_CurrentPageAriaCurrent`.
+- [x] `Pagination_SiblingEllipsisAlgorithm` (page 1, middle, last; `SiblingCount`).
 
 ### Checks
 
-- [ ] `dotnet test` green; every P1 part in [components.md](components.md) has a `Parts_Render` test.
-- [ ] `CallerClass_Only` fails the build if any P1 component emits a hardcoded utility class.
-- [ ] Sample has a page per P1 component.
-- [ ] No `ButtonColor` / size / variant tokens in Core.
+- [x] `dotnet test` green; every P1 part in [components.md](components.md) has a `Parts_Render` test.
+- [x] `CallerClass_Only` fails the build if any P1 component emits a hardcoded utility class.
+- [x] Sample has a page per P1 component.
+- [x] No `ButtonColor` / size / variant tokens in Core.
 
 ---
 

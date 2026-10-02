@@ -1,0 +1,25 @@
+@page "/components/aspect-ratio"
+
+<PageTitle>AspectRatio - BaseRz</PageTitle>
+
+<h1>AspectRatio</h1>
+<p><code>BaseAspectRatioRoot</code> parses <code>Ratio="w:h"</code> into an inline <code>aspect-ratio</code>. Invalid ratios fall back to 1:1.</p>
+
+<div class="mb-3" style="max-width: 24rem">
+    <label class="form-label" for="ratio">Ratio</label>
+    <select id="ratio" class="form-select" @bind="_ratio">
+        <option>16:9</option>
+        <option>4:3</option>
+        <option>1:1</option>
+        <option>21:9</option>
+        <option>not-a-ratio</option>
+    </select>
+</div>
+
+<BaseAspectRatioRoot Ratio="@_ratio" class="bg-secondary-subtle border rounded d-flex align-items-center justify-content-center" style="max-width: 24rem">
+    <span class="text-muted">@_ratio</span>
+</BaseAspectRatioRoot>
+
+@code {
+    private string _ratio = "16:9";
+}

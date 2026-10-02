@@ -1,0 +1,72 @@
+@inherits BaseRzTestContext
+
+@code {
+    private static RenderFragment Trail(string? listClass = null) =>
+        @<BaseBreadcrumbRoot>
+            <BaseBreadcrumbList class="@listClass">
+                <BaseBreadcrumbItem><BaseBreadcrumbLink href="/">Home</BaseBreadcrumbLink></BaseBreadcrumbItem>
+                <BaseBreadcrumbSeparator />
+                <BaseBreadcrumbItem><BaseBreadcrumbLink href="/docs">Docs</BaseBreadcrumbLink></BaseBreadcrumbItem>
+                <BaseBreadcrumbSeparator>&gt;</BaseBreadcrumbSeparator>
+                <BaseBreadcrumbItem><BaseBreadcrumbPage>Breadcrumb</BaseBreadcrumbPage></BaseBreadcrumbItem>
+            </BaseBreadcrumbList>
+        </BaseBreadcrumbRoot>;
+
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(Trail());
+
+        Assert.NotNull(cut.Find("nav > ol"));
+        Assert.Equal(5, cut.FindAll("ol > li").Count);
+        Assert.Equal(2, cut.FindAll("li > a").Count);
+        Assert.NotNull(cut.Find("li > span[aria-current=page]"));
+        Assert.Equal(2, cut.FindAll("li[role=presentation]").Count);
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(Trail("breadcrumb"));
+
+        Assert.Equal("breadcrumb", cut.Find("ol").GetAttribute("class"));
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "breadcrumb");
+        Assert.Empty(Render(Trail()).FindAll("[class]"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(@<BaseBreadcrumbRoot id="bc" data-test="probe" aria-label="Probe" />);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("nav"), "bc");
+    }
+
+    [Fact]
+    public void Breadcrumb_NavLabel_CurrentPageAriaCurrent()
+    {
+        var cut = Render(Trail());
+
+        Assert.Equal("Breadcrumb", cut.Find("nav").GetAttribute("aria-label"));
+
+        var page = cut.Find("[aria-current=page]");
+        Assert.Equal("SPAN", page.TagName);
+        Assert.Equal("link", page.GetAttribute("role"));
+        Assert.Equal("true", page.GetAttribute("aria-disabled"));
+        Assert.Equal("Breadcrumb", page.TextContent);
+        Assert.All(cut.FindAll("a"), static link => Assert.False(link.HasAttribute("aria-current")));
+
+        var separators = cut.FindAll("li[role=presentation]");
+        Assert.All(separators, static separator => Assert.Equal("true", separator.GetAttribute("aria-hidden")));
+        Assert.Equal("/", separators[0].TextContent);
+        Assert.Equal(">", separators[1].TextContent);
+    }
+
+    [Fact]
+    public void Breadcrumb_Link_AsChangesElement()
+    {
+        var cut = Render(@<BaseBreadcrumbLink As="button">Back</BaseBreadcrumbLink>);
+
+        Assert.Equal("Back", cut.Find("button").TextContent);
+    }
+}

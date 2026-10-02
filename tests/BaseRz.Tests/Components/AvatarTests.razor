@@ -1,0 +1,113 @@
+@inherits BaseRzTestContext
+
+@code {
+    private static RenderFragment Avatar(string? src, string? rootClass = null) =>
+        @<BaseAvatarRoot class="@rootClass">
+            <BaseAvatarImage Src="@src" Alt="Ada Lovelace" />
+            <BaseAvatarFallback>AL</BaseAvatarFallback>
+        </BaseAvatarRoot>;
+
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(Avatar("ada.png"));
+
+        var root = cut.Find("span[data-state]");
+        Assert.NotNull(root.QuerySelector("img"));
+        Assert.Equal("AL", root.QuerySelector("span")!.TextContent);
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(Avatar("ada.png", "avatar"));
+
+        Assert.Equal("avatar", cut.Find("span[data-state]").GetAttribute("class"));
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "avatar");
+        Assert.Empty(Render(Avatar("ada.png")).FindAll("[class]"));
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var cut = Render(Avatar("ada.png"));
+        Assert.Equal("loading", cut.Find("span[data-state]").GetAttribute("data-state"));
+        Assert.Equal("loading", cut.Find("img").GetAttribute("data-state"));
+
+        cut.Find("img").TriggerEvent("onload", new ProgressEventArgs());
+        Assert.Equal("loaded", cut.Find("span[data-state]").GetAttribute("data-state"));
+        Assert.Equal("loaded", cut.Find("img").GetAttribute("data-state"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(
+            @<BaseAvatarRoot id="av" data-test="probe" aria-label="Probe">
+                <BaseAvatarImage Src="a.png" id="img" data-test="probe" aria-label="Probe" />
+            </BaseAvatarRoot>);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("#av"), "av");
+        HeadlessAssert.AssertPassThrough(cut.Find("img"), "img");
+    }
+
+    [Fact]
+    public void Avatar_ImageError_ShowsFallback_HidesFallbackWhenLoaded()
+    {
+        var failing = Render(Avatar("broken.png"));
+        var img = failing.Find("img");
+        Assert.Equal("broken.png", img.GetAttribute("src"));
+        Assert.Equal("Ada Lovelace", img.GetAttribute("alt"));
+        Assert.Equal("true", failing.Find("span:not([data-state])").GetAttribute("aria-hidden"));
+
+        failing.Find("img").TriggerEvent("onerror", new Microsoft.AspNetCore.Components.Web.ErrorEventArgs());
+        Assert.Empty(failing.FindAll("img"));
+        Assert.Equal("error", failing.Find("span[data-state]").GetAttribute("data-state"));
+        var fallback = failing.Find("span:not([data-state])");
+        Assert.Equal("AL", fallback.TextContent);
+        Assert.False(fallback.HasAttribute("aria-hidden"));
+
+        var loading = Render(Avatar("ada.png"));
+        loading.Find("img").TriggerEvent("onload", new ProgressEventArgs());
+        Assert.NotNull(loading.Find("img"));
+        Assert.DoesNotContain("AL", loading.Markup);
+    }
+
+    [Fact]
+    public void Avatar_ImageIsSeparatePart_RootOwnsNoImg()
+    {
+        var cut = Render(@<BaseAvatarRoot><BaseAvatarFallback>AL</BaseAvatarFallback></BaseAvatarRoot>);
+
+        Assert.Empty(cut.FindAll("img"));
+        Assert.Equal("idle", cut.Find("span[data-state]").GetAttribute("data-state"));
+        Assert.False(cut.Find("span:not([data-state])").HasAttribute("aria-hidden"));
+    }
+
+    [Fact]
+    public void Avatar_MissingSrc_ShowsFallback()
+    {
+        var cut = Render(Avatar(null));
+
+        Assert.Empty(cut.FindAll("img"));
+        Assert.Equal("error", cut.Find("span[data-state]").GetAttribute("data-state"));
+        Assert.Equal("AL", cut.Find("span:not([data-state])").TextContent);
+    }
+
+    [Fact]
+    public void Avatar_SrcChange_ResetsToLoading()
+    {
+        var cut = Render<BaseAvatarRoot>(parameters => parameters.Add(p => p.ChildContent, Content("broken.png")));
+        cut.Find("img").TriggerEvent("onerror", new Microsoft.AspNetCore.Components.Web.ErrorEventArgs());
+        Assert.Empty(cut.FindAll("img"));
+
+        cut.Render(parameters => parameters.Add(p => p.ChildContent, Content("ada.png")));
+        Assert.Equal("ada.png", cut.Find("img").GetAttribute("src"));
+        Assert.Equal("loading", cut.Find("img").GetAttribute("data-state"));
+    }
+
+    private static RenderFragment Content(string src) =>
+        @<text>
+            <BaseAvatarImage Src="@src" />
+            <BaseAvatarFallback>AL</BaseAvatarFallback>
+        </text>;
+}

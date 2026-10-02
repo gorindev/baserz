@@ -1,0 +1,76 @@
+@inherits BaseRzTestContext
+
+@code {
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(@<BaseProgressRoot Value="30"><BaseProgressIndicator /></BaseProgressRoot>);
+
+        var root = cut.Find("[role=progressbar]");
+        Assert.Equal("DIV", root.TagName);
+        Assert.Equal("DIV", root.FirstElementChild!.TagName);
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(@<BaseProgressRoot class="progress" Value="30"><BaseProgressIndicator class="progress-bar" /></BaseProgressRoot>);
+
+        Assert.Equal("progress", cut.Find("[role=progressbar]").GetAttribute("class"));
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "progress", "progress-bar");
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var indeterminate = Render(@<BaseProgressRoot><BaseProgressIndicator /></BaseProgressRoot>);
+        Assert.All(indeterminate.FindAll("div"), static el => Assert.Equal("indeterminate", el.GetAttribute("data-state")));
+
+        var loading = Render(@<BaseProgressRoot Value="40"><BaseProgressIndicator /></BaseProgressRoot>);
+        Assert.All(loading.FindAll("div"), static el =>
+        {
+            Assert.Equal("loading", el.GetAttribute("data-state"));
+            Assert.Equal("40", el.GetAttribute("data-value"));
+            Assert.Equal("100", el.GetAttribute("data-max"));
+        });
+
+        var complete = Render(@<BaseProgressRoot Value="10" Max="10"><BaseProgressIndicator /></BaseProgressRoot>);
+        Assert.All(complete.FindAll("div"), static el => Assert.Equal("complete", el.GetAttribute("data-state")));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(@<BaseProgressRoot id="p" data-test="probe" aria-label="Probe" />);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("[role=progressbar]"), "p");
+    }
+
+    [Fact]
+    public void Progress_RoleProgressbar_ValuenowMinMax_IndeterminateOmitsValuenow()
+    {
+        var determinate = Render(@<BaseProgressRoot Value="25.5" Max="200" />).Find("[role=progressbar]");
+        Assert.Equal("0", determinate.GetAttribute("aria-valuemin"));
+        Assert.Equal("200", determinate.GetAttribute("aria-valuemax"));
+        Assert.Equal("25.5", determinate.GetAttribute("aria-valuenow"));
+
+        var clamped = Render(@<BaseProgressRoot Value="150" />).Find("[role=progressbar]");
+        Assert.Equal("100", clamped.GetAttribute("aria-valuenow"));
+
+        var indeterminate = Render(@<BaseProgressRoot />).Find("[role=progressbar]");
+        Assert.Equal("0", indeterminate.GetAttribute("aria-valuemin"));
+        Assert.Equal("100", indeterminate.GetAttribute("aria-valuemax"));
+        Assert.False(indeterminate.HasAttribute("aria-valuenow"));
+        Assert.False(indeterminate.HasAttribute("aria-valuetext"));
+        Assert.False(indeterminate.HasAttribute("data-value"));
+    }
+
+    [Fact]
+    public void Progress_GetValueLabel_SetsAriaValuetext()
+    {
+        Func<double, double, string> label = static (value, max) => $"{value} of {max} files";
+        var root = Render(@<BaseProgressRoot Value="3" Max="10" GetValueLabel="label" />).Find("[role=progressbar]");
+
+        Assert.Equal("3 of 10 files", root.GetAttribute("aria-valuetext"));
+    }
+}

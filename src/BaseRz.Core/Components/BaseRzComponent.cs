@@ -5,18 +5,17 @@ using Microsoft.AspNetCore.Components;
 namespace BaseRz.Core.Components;
 
 /// <summary>
-/// Shared base for BaseRz roots and parts: attribute pass-through, child content, polymorphic element via
-/// <see cref="As"/>, a stable per-instance id, and tracking of which parameters the caller supplied.
+/// Shared base for BaseRz roots and parts without a <c>ChildContent</c> parameter: attribute pass-through,
+/// polymorphic element via <see cref="As"/>, a stable per-instance id, and tracking of which parameters the
+/// caller supplied.
 /// </summary>
-public abstract class BaseRzComponent : ComponentBase
+public abstract class BaseRzComponentCore : ComponentBase
 {
     private HashSet<string> _suppliedParameters = new(StringComparer.Ordinal);
     private string? _generatedId;
 
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
-
-    [Parameter] public RenderFragment? ChildContent { get; set; }
 
     /// <summary>Overrides the rendered element name (for example <c>"a"</c> or <c>"section"</c>).</summary>
     [Parameter] public string? As { get; set; }
@@ -60,4 +59,20 @@ public abstract class BaseRzComponent : ComponentBase
     /// controlled (<c>Open</c> supplied) from uncontrolled (<c>DefaultOpen</c> only) usage.
     /// </summary>
     protected bool IsParameterSet(string parameterName) => _suppliedParameters.Contains(parameterName);
+
+    /// <summary>Whether the caller supplied <paramref name="attributeName"/> as an unmatched attribute.</summary>
+    protected bool HasAttribute(string attributeName) =>
+        AdditionalAttributes is not null && AdditionalAttributes.ContainsKey(attributeName);
+}
+
+/// <summary>Base for parts that take plain <see cref="RenderFragment"/> child content.</summary>
+public abstract class BaseRzComponent : BaseRzComponentCore
+{
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
+
+/// <summary>Base for roots whose child content receives a context object (for example pagination items).</summary>
+public abstract class BaseRzTemplatedComponent<TContext> : BaseRzComponentCore
+{
+    [Parameter] public RenderFragment<TContext>? ChildContent { get; set; }
 }

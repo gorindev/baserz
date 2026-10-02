@@ -1,0 +1,14 @@
+@page "/components/visually-hidden"
+
+<PageTitle>VisuallyHidden - BaseRz</PageTitle>
+
+<h1>VisuallyHidden</h1>
+<p>
+    <code>BaseVisuallyHiddenRoot</code> clips its content to a 1px box with an inline style, so it is read by screen
+    readers but not shown. Unlike <code>display: none</code>, it stays in the accessibility tree.
+</p>
+
+<BaseButtonRoot class="btn btn-outline-secondary">
+    <span aria-hidden="true">✕</span>
+    <BaseVisuallyHiddenRoot>Close dialog</BaseVisuallyHiddenRoot>
+</BaseButtonRoot>

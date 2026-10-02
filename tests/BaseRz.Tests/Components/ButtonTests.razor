@@ -1,0 +1,116 @@
+@inherits BaseRzTestContext
+
+@code {
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(@<BaseButtonRoot>Save</BaseButtonRoot>);
+
+        var button = cut.Find("button");
+        Assert.Equal("button", button.GetAttribute("type"));
+        Assert.False(button.HasAttribute("role"));
+        Assert.Equal("Save", button.TextContent);
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(@<BaseButtonRoot class="btn btn-primary">Save</BaseButtonRoot>);
+
+        Assert.Equal("btn btn-primary", cut.Find("button").GetAttribute("class"));
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "btn btn-primary");
+        Assert.False(Render(@<BaseButtonRoot>Save</BaseButtonRoot>).Find("button").HasAttribute("class"));
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var idle = Render(@<BaseButtonRoot>Save</BaseButtonRoot>).Find("button");
+        Assert.False(idle.HasAttribute("disabled"));
+        Assert.False(idle.HasAttribute("data-disabled"));
+        Assert.False(idle.HasAttribute("data-loading"));
+
+        var disabled = Render(@<BaseButtonRoot Disabled>Save</BaseButtonRoot>).Find("button");
+        Assert.True(disabled.HasAttribute("disabled"));
+        Assert.True(disabled.HasAttribute("data-disabled"));
+
+        var loading = Render(@<BaseButtonRoot Loading>Save</BaseButtonRoot>).Find("button");
+        Assert.True(loading.HasAttribute("data-loading"));
+        Assert.Equal("true", loading.GetAttribute("aria-busy"));
+        Assert.Equal("true", loading.GetAttribute("aria-disabled"));
+        Assert.False(loading.HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(@<BaseButtonRoot id="save" data-test="probe" aria-label="Probe">Save</BaseButtonRoot>);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("button"), "save");
+    }
+
+    [Fact]
+    public void Button_Type_OnlyOnNativeButton()
+    {
+        var submit = Render(@<BaseButtonRoot Type="submit">Save</BaseButtonRoot>);
+        Assert.Equal("submit", submit.Find("button").GetAttribute("type"));
+
+        var link = Render(@<BaseButtonRoot As="a" Type="submit">Save</BaseButtonRoot>);
+        Assert.False(link.Find("a").HasAttribute("type"));
+    }
+
+    [Fact]
+    public void Button_NonButtonElement_ActivatesOnEnterAndSpace()
+    {
+        var clicks = 0;
+        var cut = Render(@<BaseButtonRoot As="a" OnClick="() => clicks++">Open</BaseButtonRoot>);
+        var link = cut.Find("a");
+
+        Assert.Equal("button", link.GetAttribute("role"));
+        Assert.Equal("0", link.GetAttribute("tabindex"));
+
+        cut.Find("a").KeyDown(Keys.Enter);
+        cut.Find("a").KeyDown(Keys.Space);
+        cut.Find("a").KeyDown(Keys.Escape);
+        cut.Find("a").Click();
+        Assert.Equal(3, clicks);
+
+        var nativeClicks = 0;
+        var native = Render(@<BaseButtonRoot OnClick="() => nativeClicks++">Open</BaseButtonRoot>);
+        native.Find("button").KeyDown(Keys.Enter);
+        Assert.Equal(0, nativeClicks);
+    }
+
+    [Fact]
+    public void Button_NonButtonElement_AriaDisabledAndBusy()
+    {
+        var disabled = Render(@<BaseButtonRoot As="div" Disabled>Open</BaseButtonRoot>).Find("div");
+        Assert.Equal("true", disabled.GetAttribute("aria-disabled"));
+        Assert.Equal("-1", disabled.GetAttribute("tabindex"));
+        Assert.False(disabled.HasAttribute("disabled"));
+
+        var loading = Render(@<BaseButtonRoot As="div" Loading>Open</BaseButtonRoot>).Find("div");
+        Assert.Equal("true", loading.GetAttribute("aria-busy"));
+        Assert.Equal("true", loading.GetAttribute("aria-disabled"));
+        Assert.Equal("0", loading.GetAttribute("tabindex"));
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        var clicks = 0;
+
+        var disabled = Render(@<BaseButtonRoot Disabled OnClick="() => clicks++">Save</BaseButtonRoot>);
+        disabled.Find("button").Click();
+
+        var disabledDiv = Render(@<BaseButtonRoot As="div" Disabled OnClick="() => clicks++">Save</BaseButtonRoot>);
+        disabledDiv.Find("div").Click();
+        disabledDiv.Find("div").KeyDown(Keys.Enter);
+        disabledDiv.Find("div").KeyDown(Keys.Space);
+
+        var loading = Render(@<BaseButtonRoot Loading OnClick="() => clicks++">Save</BaseButtonRoot>);
+        loading.Find("button").Click();
+
+        Assert.Equal(0, clicks);
+    }
+}

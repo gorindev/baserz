@@ -55,6 +55,25 @@
         line-height: 3rem;
     }
 
+.nav-group {
+    color: #9a9a9a;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding-top: 0.75rem;
+    padding-bottom: 0.25rem;
+}
+
+.nav-sub {
+    padding-bottom: 0.125rem;
+}
+
+    .nav-sub ::deep a {
+        height: 2rem;
+        line-height: 2rem;
+        padding-left: 2.5rem;
+    }
+
 .nav-item ::deep a.active {
     background-color: rgba(255,255,255,0.37);
     color: white;

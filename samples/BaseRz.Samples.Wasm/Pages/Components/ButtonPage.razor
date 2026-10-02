@@ -1,0 +1,33 @@
+@page "/components/button"
+
+<PageTitle>Button - BaseRz</PageTitle>
+
+<h1>Button</h1>
+<p>
+    <code>BaseButtonRoot</code> renders a native <code>&lt;button type="button"&gt;</code>. With <code>As</code> set to
+    another element it adds <code>role="button"</code>, a tab stop, and Enter/Space activation.
+</p>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <BaseButtonRoot class="btn btn-primary" OnClick="() => _clicks++">Native button</BaseButtonRoot>
+    <BaseButtonRoot As="div" class="btn btn-outline-primary" OnClick="() => _clicks++">div as button</BaseButtonRoot>
+    <BaseButtonRoot class="btn btn-secondary" Disabled OnClick="() => _clicks++">Disabled</BaseButtonRoot>
+    <BaseButtonRoot class="btn btn-success" Loading="_loading" OnClick="SaveAsync">
+        @(_loading ? "Saving…" : "Save (loading)")
+    </BaseButtonRoot>
+</div>
+
+<p>Clicks: <strong>@_clicks</strong></p>
+
+@code {
+    private int _clicks;
+    private bool _loading;
+
+    private async Task SaveAsync()
+    {
+        _loading = true;
+        await Task.Delay(1500);
+        _loading = false;
+        _clicks++;
+    }
+}

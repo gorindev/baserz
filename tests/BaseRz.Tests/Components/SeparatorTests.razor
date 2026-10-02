@@ -1,0 +1,67 @@
+@inherits BaseRzTestContext
+
+@code {
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(@<BaseSeparatorRoot />);
+
+        Assert.Equal("DIV", cut.Find("[role=separator]").TagName);
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(@<BaseSeparatorRoot class="rule">Or</BaseSeparatorRoot>);
+
+        Assert.Equal("rule", cut.Find("[role=separator]").GetAttribute("class"));
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "rule");
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var horizontal = Render(@<BaseSeparatorRoot />);
+        Assert.Equal("horizontal", horizontal.Find("div").GetAttribute("data-orientation"));
+
+        var vertical = Render(@<BaseSeparatorRoot Orientation="Orientation.Vertical" />);
+        Assert.Equal("vertical", vertical.Find("div").GetAttribute("data-orientation"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(@<BaseSeparatorRoot id="sep" data-test="probe" aria-label="Probe" />);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("div"), "sep");
+    }
+
+    [Fact]
+    public void Separator_RoleAndOrientation()
+    {
+        var horizontal = Render(@<BaseSeparatorRoot />).Find("div");
+        Assert.Equal("separator", horizontal.GetAttribute("role"));
+        Assert.False(horizontal.HasAttribute("aria-orientation"));
+
+        var vertical = Render(@<BaseSeparatorRoot Orientation="Orientation.Vertical" />).Find("div");
+        Assert.Equal("separator", vertical.GetAttribute("role"));
+        Assert.Equal("vertical", vertical.GetAttribute("aria-orientation"));
+
+        var decorative = Render(@<BaseSeparatorRoot Decorative Orientation="Orientation.Vertical" />).Find("div");
+        Assert.Equal("none", decorative.GetAttribute("role"));
+        Assert.False(decorative.HasAttribute("aria-orientation"));
+        Assert.Equal("vertical", decorative.GetAttribute("data-orientation"));
+    }
+
+    [Fact]
+    public void Separator_Labeled_WrapsContentWithHiddenSegments()
+    {
+        var cut = Render(@<BaseSeparatorRoot>Or</BaseSeparatorRoot>);
+        var root = cut.Find("[role=separator]");
+        var segments = root.QuerySelectorAll("span[aria-hidden=true]");
+
+        Assert.Equal(2, segments.Length);
+        Assert.All(segments, static segment => Assert.False(segment.HasAttribute("class")));
+        Assert.Equal("Or", root.TextContent.Trim());
+    }
+}

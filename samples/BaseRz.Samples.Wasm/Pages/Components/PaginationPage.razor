@@ -1,0 +1,61 @@
+@page "/components/pagination"
+
+<PageTitle>Pagination - BaseRz</PageTitle>
+
+<h1>Pagination</h1>
+<p>
+    <code>BasePaginationRoot</code> hands its child content a context whose <code>Items</code> lists page numbers, with
+    <code>null</code> marking an ellipsis. The current page has <code>aria-current="page"</code>.
+</p>
+
+<h2 class="h5 mt-4">Controlled (<code>@@bind-Page</code>)</h2>
+<BasePaginationRoot @bind-Page="_page" PageCount="20" SiblingCount="_siblings" Context="pagination">
+    <BasePaginationList class="pagination">
+        <BasePaginationItem class="page-item"><BasePaginationPrev class="page-link" /></BasePaginationItem>
+        @foreach (var item in pagination.Items)
+        {
+            <BasePaginationItem class="page-item">
+                @if (item is int page)
+                {
+                    <BasePaginationLink Page="page" class="page-link" />
+                }
+                else
+                {
+                    <BasePaginationEllipsis class="page-link" />
+                }
+            </BasePaginationItem>
+        }
+        <BasePaginationItem class="page-item"><BasePaginationNext class="page-link" /></BasePaginationItem>
+    </BasePaginationList>
+</BasePaginationRoot>
+<p>Page <strong>@_page</strong> of 20.</p>
+<div style="max-width: 16rem">
+    <label class="form-label" for="siblings">SiblingCount: @_siblings</label>
+    <input id="siblings" type="range" class="form-range" min="0" max="3" @bind="_siblings" @bind:event="oninput" />
+</div>
+
+<h2 class="h5 mt-4">Uncontrolled (<code>DefaultPage</code>)</h2>
+<BasePaginationRoot PageCount="5" DefaultPage="3" Context="pagination">
+    <BasePaginationList class="pagination">
+        <BasePaginationItem class="page-item"><BasePaginationPrev class="page-link">‹</BasePaginationPrev></BasePaginationItem>
+        @foreach (var item in pagination.Items)
+        {
+            <BasePaginationItem class="page-item">
+                @if (item is int page)
+                {
+                    <BasePaginationLink Page="page" class="page-link" />
+                }
+                else
+                {
+                    <BasePaginationEllipsis class="page-link" />
+                }
+            </BasePaginationItem>
+        }
+        <BasePaginationItem class="page-item"><BasePaginationNext class="page-link">›</BasePaginationNext></BasePaginationItem>
+    </BasePaginationList>
+</BasePaginationRoot>
+
+@code {
+    private int _page = 7;
+    private int _siblings = 1;
+}

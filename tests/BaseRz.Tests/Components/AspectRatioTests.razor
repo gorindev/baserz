@@ -1,0 +1,48 @@
+@inherits BaseRzTestContext
+
+@code {
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(@<BaseAspectRatioRoot Ratio="16:9"><img src="a.png" alt="" /></BaseAspectRatioRoot>);
+
+        var root = cut.Find("div");
+        Assert.Equal("IMG", root.FirstElementChild!.TagName);
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(@<BaseAspectRatioRoot class="frame" />);
+
+        Assert.Equal("frame", cut.Find("div").GetAttribute("class"));
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "frame");
+        Assert.False(Render(@<BaseAspectRatioRoot />).Find("div").HasAttribute("class"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(@<BaseAspectRatioRoot id="ar" data-test="probe" aria-label="Probe" />);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("div"), "ar");
+    }
+
+    [Theory]
+    [InlineData("16:9", "16 / 9")]
+    [InlineData(" 4 : 3 ", "4 / 3")]
+    [InlineData("1.5:1", "1.5 / 1")]
+    [InlineData(null, "1 / 1")]
+    [InlineData("", "1 / 1")]
+    [InlineData("abc", "1 / 1")]
+    [InlineData("0:5", "1 / 1")]
+    [InlineData("16/9", "1 / 1")]
+    public void AspectRatio_ParsesRatio_SetsInlineAspectRatio(string? ratio, string expected)
+    {
+        var cut = Render(@<BaseAspectRatioRoot Ratio="@ratio" style="max-width: 20rem" />);
+
+        var style = cut.Find("div").GetAttribute("style")!;
+        Assert.StartsWith($"aspect-ratio: {expected}", style);
+        Assert.EndsWith("max-width: 20rem", style);
+    }
+}

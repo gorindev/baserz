@@ -1,0 +1,42 @@
+@page "/components/table"
+
+<PageTitle>Table - BaseRz</PageTitle>
+
+<h1>Table</h1>
+<p>Each <code>BaseTable*</code> part is its semantic element and nothing else.</p>
+
+<BaseTableRoot class="table table-striped">
+    <BaseTableCaption>Recent invoices</BaseTableCaption>
+    <BaseTableHeader>
+        <BaseTableRow>
+            <BaseTableHead scope="col">Invoice</BaseTableHead>
+            <BaseTableHead scope="col">Status</BaseTableHead>
+            <BaseTableHead scope="col" class="text-end">Amount</BaseTableHead>
+        </BaseTableRow>
+    </BaseTableHeader>
+    <BaseTableBody>
+        @foreach (var (id, status, amount) in Invoices)
+        {
+            <BaseTableRow>
+                <BaseTableHead scope="row">@id</BaseTableHead>
+                <BaseTableCell>@status</BaseTableCell>
+                <BaseTableCell class="text-end">@amount.ToString("C")</BaseTableCell>
+            </BaseTableRow>
+        }
+    </BaseTableBody>
+    <BaseTableFooter>
+        <BaseTableRow>
+            <BaseTableHead scope="row" colspan="2">Total</BaseTableHead>
+            <BaseTableCell class="text-end">@Invoices.Sum(static i => i.Amount).ToString("C")</BaseTableCell>
+        </BaseTableRow>
+    </BaseTableFooter>
+</BaseTableRoot>
+
+@code {
+    private static readonly (string Id, string Status, decimal Amount)[] Invoices =
+    [
+        ("INV001", "Paid", 250m),
+        ("INV002", "Pending", 150m),
+        ("INV003", "Unpaid", 350m),
+    ];
+}

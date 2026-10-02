@@ -1,0 +1,27 @@
+@page "/components/alert"
+
+<PageTitle>Alert - BaseRz</PageTitle>
+
+<h1>Alert</h1>
+<p><code>BaseAlertRoot</code> renders <code>role="alert"</code>. Mounting a Title or Description wires <code>aria-labelledby</code> / <code>aria-describedby</code>.</p>
+
+<BaseAlertRoot class="alert alert-info">
+    <BaseAlertTitle class="alert-heading">Heads up!</BaseAlertTitle>
+    <BaseAlertDescription>You can add components to your app using the compound API.</BaseAlertDescription>
+</BaseAlertRoot>
+
+<BaseButtonRoot class="btn btn-outline-secondary btn-sm" OnClick="() => _show = !_show">
+    @(_show ? "Dismiss" : "Show") error alert
+</BaseButtonRoot>
+
+@if (_show)
+{
+    <BaseAlertRoot class="alert alert-danger mt-3">
+        <BaseAlertTitle As="strong" class="d-block">Upload failed</BaseAlertTitle>
+        <BaseAlertDescription>The file exceeded the 10 MB limit.</BaseAlertDescription>
+    </BaseAlertRoot>
+}
+
+@code {
+    private bool _show;
+}

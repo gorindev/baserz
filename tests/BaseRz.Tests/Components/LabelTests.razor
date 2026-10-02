@@ -1,0 +1,42 @@
+@inherits BaseRzTestContext
+
+@code {
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(@<BaseLabelRoot>Name</BaseLabelRoot>);
+
+        Assert.Equal("Name", cut.Find("label").TextContent);
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(@<BaseLabelRoot class="form-label">Name</BaseLabelRoot>);
+
+        Assert.Equal("form-label", cut.Find("label").GetAttribute("class"));
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "form-label");
+        Assert.False(Render(@<BaseLabelRoot>Name</BaseLabelRoot>).Find("label").HasAttribute("class"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(@<BaseLabelRoot id="lbl" data-test="probe" aria-label="Probe">Name</BaseLabelRoot>);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("label"), "lbl");
+    }
+
+    [Fact]
+    public void Label_For_AssociatesControl()
+    {
+        var cut = Render(@<div><BaseLabelRoot For="email">Email</BaseLabelRoot><input id="email" /></div>);
+
+        var label = cut.Find("label");
+        Assert.Equal("email", label.GetAttribute("for"));
+        Assert.NotNull(cut.Find($"#{label.GetAttribute("for")}"));
+
+        var withoutFor = Render(@<BaseLabelRoot>Email</BaseLabelRoot>);
+        Assert.False(withoutFor.Find("label").HasAttribute("for"));
+    }
+}

@@ -105,6 +105,101 @@ code {
     color: #c02d76;
 }
 
+/* Demo styling for BaseRz samples: targets the components' data-* state hooks. */
+.demo-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    overflow: hidden;
+    border-radius: 50%;
+    background: #e9ecef;
+    font-weight: 600;
+}
+
+    .demo-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+        .demo-avatar img[data-state="loading"] {
+            display: none;
+        }
+
+.demo-image {
+    width: 8rem;
+    height: 8rem;
+    object-fit: contain;
+}
+
+    .demo-image[data-state="loading"] {
+        opacity: 0.3;
+    }
+
+.demo-breadcrumb {
+    display: flex;
+    gap: 0.5rem;
+    list-style: none;
+    padding: 0;
+}
+
+    .demo-breadcrumb [aria-current="page"] {
+        font-weight: 600;
+    }
+
+.demo-separator {
+    background: #dee2e6;
+}
+
+    .demo-separator[data-orientation="horizontal"] {
+        height: 1px;
+        width: 100%;
+        margin: 0.75rem 0;
+    }
+
+    .demo-separator[data-orientation="vertical"] {
+        width: 1px;
+        align-self: stretch;
+    }
+
+.demo-separator.demo-separator-labeled[data-orientation] {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    height: auto;
+    background: none;
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+    .demo-separator-labeled > span[aria-hidden] {
+        flex: 1;
+        height: 1px;
+        background: #dee2e6;
+    }
+
+.demo-toggle[data-state="on"] {
+    color: #fff;
+    background-color: #212529;
+}
+
+.pagination .page-link[data-state="active"] {
+    color: #fff;
+    background-color: #1b6ec2;
+    border-color: #1b6ec2;
+}
+
+.pagination .page-link[disabled] {
+    color: #adb5bd;
+    pointer-events: none;
+}
+
+.pagination span.page-link {
+    color: #6c757d;
+}
+
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
     color: var(--bs-secondary-color);
     text-align: end;

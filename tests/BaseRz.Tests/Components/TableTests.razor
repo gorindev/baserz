@@ -1,0 +1,70 @@
+@inherits BaseRzTestContext
+
+@code {
+    private static RenderFragment FullTable(string? rootClass = null) =>
+        @<BaseTableRoot class="@rootClass">
+            <BaseTableCaption>Invoices</BaseTableCaption>
+            <BaseTableHeader>
+                <BaseTableRow>
+                    <BaseTableHead scope="col">Invoice</BaseTableHead>
+                    <BaseTableHead scope="col">Amount</BaseTableHead>
+                </BaseTableRow>
+            </BaseTableHeader>
+            <BaseTableBody>
+                <BaseTableRow>
+                    <BaseTableCell>INV001</BaseTableCell>
+                    <BaseTableCell>$250.00</BaseTableCell>
+                </BaseTableRow>
+            </BaseTableBody>
+            <BaseTableFooter>
+                <BaseTableRow>
+                    <BaseTableCell>Total</BaseTableCell>
+                    <BaseTableCell>$250.00</BaseTableCell>
+                </BaseTableRow>
+            </BaseTableFooter>
+        </BaseTableRoot>;
+
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(FullTable());
+
+        Assert.NotNull(cut.Find("table > caption"));
+        Assert.NotNull(cut.Find("table > thead > tr > th"));
+        Assert.NotNull(cut.Find("table > tbody > tr > td"));
+        Assert.NotNull(cut.Find("table > tfoot > tr > td"));
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(FullTable("table"));
+
+        Assert.Equal("table", cut.Find("table").GetAttribute("class"));
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "table");
+        Assert.Empty(Render(FullTable()).FindAll("[class]"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(
+            @<BaseTableRoot id="t" data-test="probe" aria-label="Probe">
+                <BaseTableBody><BaseTableRow><BaseTableCell id="c" data-test="probe" aria-label="Probe">x</BaseTableCell></BaseTableRow></BaseTableBody>
+            </BaseTableRoot>);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("table"), "t");
+        HeadlessAssert.AssertPassThrough(cut.Find("td"), "c");
+    }
+
+    [Fact]
+    public void Table_RendersSemanticTags_CaptionTheadTbodyTfoot()
+    {
+        var cut = Render(FullTable());
+        var table = cut.Find("table");
+
+        Assert.Equal(["CAPTION", "THEAD", "TBODY", "TFOOT"], table.Children.Select(static child => child.TagName));
+        Assert.Equal("col", cut.Find("th").GetAttribute("scope"));
+        Assert.Null(table.ParentElement?.GetAttribute("class"));
+    }
+}

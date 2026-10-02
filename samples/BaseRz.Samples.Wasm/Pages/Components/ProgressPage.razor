@@ -1,0 +1,27 @@
+@page "/components/progress"
+
+<PageTitle>Progress - BaseRz</PageTitle>
+
+<h1>Progress</h1>
+<p>
+    <code>BaseProgressRoot</code> renders <code>role="progressbar"</code>. A null <code>Value</code> is indeterminate and
+    omits <code>aria-valuenow</code>. The indicator only carries <code>data-*</code> state; size it yourself.
+</p>
+
+<div style="max-width: 24rem">
+    <BaseProgressRoot Value="_value" aria-label="Upload" GetValueLabel="Label" class="progress mb-2">
+        <BaseProgressIndicator class="progress-bar" style="@($"width: {_value}%")" />
+    </BaseProgressRoot>
+    <input type="range" class="form-range" min="0" max="100" @bind="_value" @bind:event="oninput" aria-label="Value" />
+
+    <p class="mt-3 mb-1">Indeterminate</p>
+    <BaseProgressRoot aria-label="Loading" class="progress">
+        <BaseProgressIndicator class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%" />
+    </BaseProgressRoot>
+</div>
+
+@code {
+    private double _value = 40;
+
+    private static string Label(double value, double max) => $"{value:0} of {max:0} percent";
+}

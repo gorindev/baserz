@@ -1,0 +1,16 @@
+@page "/components/breadcrumb"
+
+<PageTitle>Breadcrumb - BaseRz</PageTitle>
+
+<h1>Breadcrumb</h1>
+<p><code>BaseBreadcrumbRoot</code> is a <code>nav</code> labeled "Breadcrumb"; <code>BaseBreadcrumbPage</code> carries <code>aria-current="page"</code>.</p>
+
+<BaseBreadcrumbRoot>
+    <BaseBreadcrumbList class="demo-breadcrumb">
+        <BaseBreadcrumbItem><BaseBreadcrumbLink href="">Home</BaseBreadcrumbLink></BaseBreadcrumbItem>
+        <BaseBreadcrumbSeparator />
+        <BaseBreadcrumbItem><BaseBreadcrumbLink href="components">Components</BaseBreadcrumbLink></BaseBreadcrumbItem>
+        <BaseBreadcrumbSeparator>›</BaseBreadcrumbSeparator>
+        <BaseBreadcrumbItem><BaseBreadcrumbPage>Breadcrumb</BaseBreadcrumbPage></BaseBreadcrumbItem>
+    </BaseBreadcrumbList>
+</BaseBreadcrumbRoot>
