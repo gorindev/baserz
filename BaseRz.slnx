@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/docs/" />
+  <Folder Name="/samples/">
+    <Project Path="samples/BaseRz.Samples.Wasm/BaseRz.Samples.Wasm.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/BaseRz.Core/BaseRz.Core.csproj" />
     <Project Path="src/BaseRz.JS/BaseRz.JS.csproj" />
