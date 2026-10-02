@@ -1,0 +1,30 @@
+@page "/components/radio-group"
+
+<PageTitle>RadioGroup - BaseRz</PageTitle>
+
+<h1>RadioGroup</h1>
+<p>
+    <code>BaseRadioGroupRoot</code> renders <code>role="radiogroup"</code> with <code>role="radio"</code> buttons, not
+    native radio inputs. Arrow keys move focus and selection together; <code>Name</code> adds a hidden input for forms.
+</p>
+
+<span id="plan-label" class="fw-semibold">Plan</span>
+<BaseRadioGroupRoot @bind-Value="_plan" Name="plan" Required aria-labelledby="plan-label" class="demo-radio-group mb-2">
+    <label class="demo-radio-option">
+        <BaseRadioGroupItem Value="free" class="demo-radio"><BaseRadioGroupIndicator class="demo-radio-dot" /></BaseRadioGroupItem>
+        Free
+    </label>
+    <label class="demo-radio-option">
+        <BaseRadioGroupItem Value="team" Disabled class="demo-radio"><BaseRadioGroupIndicator class="demo-radio-dot" /></BaseRadioGroupItem>
+        Team (disabled)
+    </label>
+    <label class="demo-radio-option">
+        <BaseRadioGroupItem Value="pro" class="demo-radio"><BaseRadioGroupIndicator class="demo-radio-dot" /></BaseRadioGroupItem>
+        Pro
+    </label>
+</BaseRadioGroupRoot>
+<p>Controlled: <code>@(_plan ?? "none")</code></p>
+
+@code {
+    private string? _plan = "free";
+}

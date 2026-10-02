@@ -1,0 +1,30 @@
+@page "/components/toggle-group"
+
+<PageTitle>ToggleGroup - BaseRz</PageTitle>
+
+<h1>ToggleGroup</h1>
+<p>
+    <code>BaseToggleGroupRoot</code> is a <code>role="group"</code> of <code>aria-pressed</code> buttons with one tab stop;
+    arrow keys move focus without changing what is pressed.
+</p>
+
+<h2 class="h5">Single</h2>
+<BaseToggleGroupRoot @bind-Value="_align" aria-label="Text alignment" class="btn-group mb-2">
+    <BaseToggleGroupItem Value="left" class="btn btn-outline-dark demo-toggle">Left</BaseToggleGroupItem>
+    <BaseToggleGroupItem Value="center" class="btn btn-outline-dark demo-toggle">Center</BaseToggleGroupItem>
+    <BaseToggleGroupItem Value="right" class="btn btn-outline-dark demo-toggle">Right</BaseToggleGroupItem>
+</BaseToggleGroupRoot>
+<p>Alignment: <code>@(_align ?? "none")</code></p>
+
+<h2 class="h5">Multiple</h2>
+<BaseToggleGroupRoot Type="SelectionMode.Multiple" @bind-Values="_styles" aria-label="Text style" class="btn-group mb-2">
+    <BaseToggleGroupItem Value="bold" aria-label="Bold" class="btn btn-outline-dark demo-toggle"><strong>B</strong></BaseToggleGroupItem>
+    <BaseToggleGroupItem Value="italic" aria-label="Italic" class="btn btn-outline-dark demo-toggle"><em>I</em></BaseToggleGroupItem>
+    <BaseToggleGroupItem Value="underline" Disabled aria-label="Underline" class="btn btn-outline-dark demo-toggle"><u>U</u></BaseToggleGroupItem>
+</BaseToggleGroupRoot>
+<p>Styles: <code>@(_styles.Count == 0 ? "none" : string.Join(", ", _styles))</code></p>
+
+@code {
+    private string? _align = "left";
+    private IReadOnlyCollection<string> _styles = [];
+}

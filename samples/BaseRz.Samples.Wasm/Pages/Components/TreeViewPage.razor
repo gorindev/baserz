@@ -1,0 +1,37 @@
+@page "/components/tree-view"
+
+<PageTitle>TreeView - BaseRz</PageTitle>
+
+<h1>TreeView</h1>
+<p>
+    <code>BaseTreeViewRoot</code> renders <code>role="tree"</code> with nested <code>treeitem</code>s. Up/Down move between
+    visible items, Right expands or enters a branch, Left collapses or returns to the parent, Enter/Space selects.
+</p>
+
+<BaseTreeViewRoot @bind-Value="_selected" @bind-ExpandedValues="_expanded" aria-label="Files" class="demo-tree">
+    <BaseTreeViewItem Value="docs">
+        <BaseTreeViewTrigger>Docs</BaseTreeViewTrigger>
+        <BaseTreeViewContent>
+            <BaseTreeViewItem Value="readme"><BaseTreeViewTrigger>README.md</BaseTreeViewTrigger></BaseTreeViewItem>
+            <BaseTreeViewItem Value="guide" Disabled><BaseTreeViewTrigger>guide.md (disabled)</BaseTreeViewTrigger></BaseTreeViewItem>
+            <BaseTreeViewItem Value="api"><BaseTreeViewTrigger>api.md</BaseTreeViewTrigger></BaseTreeViewItem>
+        </BaseTreeViewContent>
+    </BaseTreeViewItem>
+    <BaseTreeViewItem Value="src">
+        <BaseTreeViewTrigger>src</BaseTreeViewTrigger>
+        <BaseTreeViewContent>
+            <BaseTreeViewItem Value="program"><BaseTreeViewTrigger>Program.cs</BaseTreeViewTrigger></BaseTreeViewItem>
+        </BaseTreeViewContent>
+    </BaseTreeViewItem>
+    <BaseTreeViewItem Value="license"><BaseTreeViewTrigger>LICENSE</BaseTreeViewTrigger></BaseTreeViewItem>
+</BaseTreeViewRoot>
+
+<p class="mt-2">
+    Selected: <code>@(_selected ?? "none")</code>,
+    expanded: <code>@(_expanded.Count == 0 ? "none" : string.Join(", ", _expanded))</code>
+</p>
+
+@code {
+    private string? _selected;
+    private IReadOnlyCollection<string> _expanded = ["docs"];
+}

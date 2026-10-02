@@ -1,0 +1,153 @@
+@inherits BaseRzTestContext
+
+@code {
+    private static RenderFragment Collapsible(bool defaultOpen = false, bool disabled = false) =>
+        @<BaseCollapsibleRoot DefaultOpen="defaultOpen" Disabled="disabled" class="root">
+            <BaseCollapsibleTrigger class="trigger">Toggle</BaseCollapsibleTrigger>
+            <BaseCollapsibleContent class="content">Body</BaseCollapsibleContent>
+        </BaseCollapsibleRoot>;
+
+    private static RenderFragment Parts() =>
+        @<text>
+            <BaseCollapsibleTrigger>Toggle</BaseCollapsibleTrigger>
+            <BaseCollapsibleContent>Body</BaseCollapsibleContent>
+        </text>;
+
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(Collapsible());
+
+        var root = cut.Find("div.root");
+        Assert.NotNull(root.QuerySelector("button.trigger"));
+        Assert.Equal("Body", root.QuerySelector("div.content")!.TextContent);
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(Collapsible());
+
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "root", "trigger", "content");
+        Assert.Empty(Render(@<BaseCollapsibleRoot>@Parts()</BaseCollapsibleRoot>).FindAll("[class]"));
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var closed = Render(Collapsible());
+        Assert.All(closed.FindAll("[data-state]"), element => Assert.Equal("closed", element.GetAttribute("data-state")));
+        Assert.Empty(closed.FindAll("[data-disabled]"));
+
+        var open = Render(Collapsible(defaultOpen: true, disabled: true));
+        Assert.All(open.FindAll("[data-state]"), element => Assert.Equal("open", element.GetAttribute("data-state")));
+        Assert.True(open.Find("div.root").HasAttribute("data-disabled"));
+        Assert.True(open.Find("button").HasAttribute("data-disabled"));
+        Assert.True(open.Find("button").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(
+            @<BaseCollapsibleRoot id="root" data-test="probe" aria-label="Probe">
+                <BaseCollapsibleTrigger id="trigger" data-test="probe" aria-label="Probe">T</BaseCollapsibleTrigger>
+                <BaseCollapsibleContent id="content" data-test="probe" aria-label="Probe">C</BaseCollapsibleContent>
+            </BaseCollapsibleRoot>);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("#root"), "root");
+        HeadlessAssert.AssertPassThrough(cut.Find("button"), "trigger");
+        HeadlessAssert.AssertPassThrough(cut.Find("[role=region]"), "content");
+        Assert.Equal("content", cut.Find("button").GetAttribute("aria-controls"));
+        Assert.Equal("trigger", cut.Find("[role=region]").GetAttribute("aria-labelledby"));
+    }
+
+    [Fact]
+    public void Collapsible_AriaExpandedControls_InertWhenClosed_DefaultOpen()
+    {
+        var cut = Render(Collapsible());
+        var trigger = cut.Find("button");
+        var content = cut.Find("[role=region]");
+        Assert.Equal("button", trigger.GetAttribute("type"));
+        Assert.Equal("false", trigger.GetAttribute("aria-expanded"));
+        Assert.Equal(content.Id, trigger.GetAttribute("aria-controls"));
+        Assert.Equal(trigger.Id, content.GetAttribute("aria-labelledby"));
+        Assert.False(string.IsNullOrEmpty(trigger.Id));
+        Assert.True(content.HasAttribute("inert"));
+        Assert.True(content.HasAttribute("hidden"));
+
+        cut.Find("button").Click();
+        Assert.Equal("true", cut.Find("button").GetAttribute("aria-expanded"));
+        Assert.False(cut.Find("[role=region]").HasAttribute("inert"));
+        Assert.False(cut.Find("[role=region]").HasAttribute("hidden"));
+
+        var seeded = Render(Collapsible(defaultOpen: true));
+        Assert.Equal("true", seeded.Find("button").GetAttribute("aria-expanded"));
+        Assert.False(seeded.Find("[role=region]").HasAttribute("inert"));
+    }
+
+    [Fact]
+    public void Controlled_Bind()
+    {
+        var parent = false;
+        var emitted = new List<bool>();
+        var cut = Render<BaseCollapsibleRoot>(parameters => parameters
+            .Add(p => p.Open, parent)
+            .Add(p => p.OpenChanged, value => { emitted.Add(value); parent = value; })
+            .Add(p => p.ChildContent, Parts()));
+
+        cut.Find("button").Click();
+        Assert.Equal([true], emitted);
+        Assert.Equal("false", cut.Find("button").GetAttribute("aria-expanded"));
+
+        cut.Render(parameters => parameters.Add(p => p.Open, parent));
+        Assert.Equal("true", cut.Find("button").GetAttribute("aria-expanded"));
+        Assert.Equal("open", cut.Find("[role=region]").GetAttribute("data-state"));
+    }
+
+    [Fact]
+    public void Uncontrolled_Default()
+    {
+        var cut = Render<BaseCollapsibleRoot>(parameters => parameters
+            .Add(p => p.DefaultOpen, true)
+            .Add(p => p.ChildContent, Parts()));
+
+        cut.Render(parameters => parameters.Add(p => p.DefaultOpen, false));
+        Assert.Equal("true", cut.Find("button").GetAttribute("aria-expanded"));
+
+        cut.Find("button").Click();
+        Assert.Equal("false", cut.Find("button").GetAttribute("aria-expanded"));
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        var cut = Render(Collapsible(disabled: true));
+        cut.Find("button").Click();
+        Assert.Equal("false", cut.Find("button").GetAttribute("aria-expanded"));
+
+        var asDiv = Render(
+            @<BaseCollapsibleRoot Disabled>
+                <BaseCollapsibleTrigger As="div">T</BaseCollapsibleTrigger>
+                <BaseCollapsibleContent>C</BaseCollapsibleContent>
+            </BaseCollapsibleRoot>);
+        asDiv.Find("[role=button]").KeyDown(Keys.Enter);
+        Assert.Equal("false", asDiv.Find("[role=button]").GetAttribute("aria-expanded"));
+        Assert.Equal("true", asDiv.Find("[role=button]").GetAttribute("aria-disabled"));
+    }
+
+    [Fact]
+    public void Collapsible_NonButtonTrigger_TogglesOnEnterAndSpace()
+    {
+        var cut = Render(
+            @<BaseCollapsibleRoot>
+                <BaseCollapsibleTrigger As="span">T</BaseCollapsibleTrigger>
+                <BaseCollapsibleContent>C</BaseCollapsibleContent>
+            </BaseCollapsibleRoot>);
+
+        cut.Find("span").KeyDown(Keys.Enter);
+        Assert.Equal("true", cut.Find("span").GetAttribute("aria-expanded"));
+        cut.Find("span").KeyDown(Keys.Space);
+        Assert.Equal("false", cut.Find("span").GetAttribute("aria-expanded"));
+    }
+}

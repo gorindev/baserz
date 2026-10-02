@@ -1,0 +1,28 @@
+@page "/components/switch"
+
+<PageTitle>Switch - BaseRz</PageTitle>
+
+<h1>Switch</h1>
+<p>
+    <code>BaseSwitchRoot</code> is a <code>role="switch"</code> button with <code>aria-checked</code> and
+    <code>data-state="checked|unchecked"</code>; <code>BaseSwitchThumb</code> mirrors the state for styling.
+</p>
+
+<label class="demo-check-option mb-2">
+    <BaseSwitchRoot @bind-Checked="_wifi" class="demo-switch"><BaseSwitchThumb class="demo-switch-thumb" /></BaseSwitchRoot>
+    Wi-Fi (controlled: <code>@(_wifi ? "on" : "off")</code>)
+</label>
+
+<label class="demo-check-option mb-2">
+    <BaseSwitchRoot DefaultChecked Name="bluetooth" class="demo-switch"><BaseSwitchThumb class="demo-switch-thumb" /></BaseSwitchRoot>
+    Bluetooth (uncontrolled, <code>DefaultChecked</code>)
+</label>
+
+<label class="demo-check-option">
+    <BaseSwitchRoot Disabled class="demo-switch"><BaseSwitchThumb class="demo-switch-thumb" /></BaseSwitchRoot>
+    Airplane mode (disabled)
+</label>
+
+@code {
+    private bool _wifi;
+}

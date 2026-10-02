@@ -89,7 +89,7 @@ public partial class P1GateTests
 
     public static string Kebab(string name) => KebabBoundary().Replace(name, "-$1").ToLowerInvariant();
 
-    private static List<string> ComponentsMdParts(string root)
+    internal static List<string> ComponentsMdParts(string root)
     {
         var lines = File.ReadAllLines(Path.Combine(RepoRoot.Find(), "docs", "components.md"));
         var parts = new List<string>();

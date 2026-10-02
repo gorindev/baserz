@@ -1,0 +1,32 @@
+@page "/components/checkbox-group"
+
+<PageTitle>CheckboxGroup - BaseRz</PageTitle>
+
+<h1>CheckboxGroup</h1>
+<p>
+    <code>BaseCheckboxGroupRoot</code> is a <code>role="group"</code> labeled by its <code>Label</code> part and described
+    by its <code>Description</code> and <code>ErrorMessage</code> parts. Checkboxes with a <code>Value</code> join the
+    group's value list.
+</p>
+
+<BaseCheckboxGroupRoot @bind-Values="_toppings" Name="toppings" class="demo-checkbox-group">
+    <BaseCheckboxGroupLabel class="fw-semibold">Toppings</BaseCheckboxGroupLabel>
+    <BaseCheckboxGroupDescription class="small text-muted">Pick at least one.</BaseCheckboxGroupDescription>
+    @foreach (var (value, label) in Options)
+    {
+        <label class="demo-check-option">
+            <BaseCheckboxRoot Value="@value" class="demo-checkbox"><BaseCheckboxIndicator>✓</BaseCheckboxIndicator></BaseCheckboxRoot>
+            @label
+        </label>
+    }
+    @if (_toppings.Count == 0)
+    {
+        <BaseCheckboxGroupErrorMessage class="text-danger small">Choose a topping.</BaseCheckboxGroupErrorMessage>
+    }
+</BaseCheckboxGroupRoot>
+<p class="mt-2">Values: <code>@(_toppings.Count == 0 ? "none" : string.Join(", ", _toppings))</code></p>
+
+@code {
+    private static readonly (string Value, string Label)[] Options = [("cheese", "Cheese"), ("olives", "Olives"), ("basil", "Basil")];
+    private IReadOnlyCollection<string> _toppings = ["cheese"];
+}

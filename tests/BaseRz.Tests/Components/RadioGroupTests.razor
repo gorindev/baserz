@@ -1,0 +1,177 @@
+@inherits BaseRzTestContext
+
+@code {
+    private static RenderFragment Items(bool disableB = false) =>
+        @<text>
+            <BaseRadioGroupItem Value="a" class="radio" aria-label="A"><BaseRadioGroupIndicator class="dot" /></BaseRadioGroupItem>
+            <BaseRadioGroupItem Value="b" Disabled="disableB" class="radio" aria-label="B"><BaseRadioGroupIndicator class="dot" /></BaseRadioGroupItem>
+            <BaseRadioGroupItem Value="c" class="radio" aria-label="C"><BaseRadioGroupIndicator class="dot" /></BaseRadioGroupItem>
+        </text>;
+
+    private static string?[] Checked<T>(IRenderedComponent<T> cut) where T : IComponent =>
+        cut.FindAll("[role=radio]").Select(radio => radio.GetAttribute("aria-checked")).ToArray();
+
+    private static string?[] TabIndexes<T>(IRenderedComponent<T> cut) where T : IComponent =>
+        cut.FindAll("[role=radio]").Select(radio => radio.GetAttribute("tabindex")).ToArray();
+
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(@<BaseRadioGroupRoot DefaultValue="a" class="root">@Items()</BaseRadioGroupRoot>);
+
+        var root = cut.Find("div[role=radiogroup].root");
+        Assert.Equal(3, root.QuerySelectorAll("button[role=radio].radio").Length);
+        Assert.Single(cut.FindAll("span.dot"));
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(@<BaseRadioGroupRoot DefaultValue="a" class="root">@Items()</BaseRadioGroupRoot>);
+
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "root", "radio", "dot");
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var cut = Render(@<BaseRadioGroupRoot DefaultValue="a">@Items(disableB: true)</BaseRadioGroupRoot>);
+
+        var radios = cut.FindAll("[role=radio]");
+        Assert.Equal("checked", radios[0].GetAttribute("data-state"));
+        Assert.Equal("unchecked", radios[1].GetAttribute("data-state"));
+        Assert.Equal("checked", cut.Find("span").GetAttribute("data-state"));
+        Assert.True(radios[1].HasAttribute("data-disabled"));
+        Assert.True(radios[1].HasAttribute("disabled"));
+
+        var root = Render(@<BaseRadioGroupRoot Disabled>@Items()</BaseRadioGroupRoot>);
+        Assert.True(root.Find("[role=radiogroup]").HasAttribute("data-disabled"));
+        Assert.Equal("true", root.Find("[role=radiogroup]").GetAttribute("aria-disabled"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(
+            @<BaseRadioGroupRoot DefaultValue="a" id="root" data-test="probe" aria-label="Probe">
+                <BaseRadioGroupItem Value="a" id="radio" data-test="probe" aria-label="Probe">
+                    <BaseRadioGroupIndicator id="dot" data-test="probe" aria-label="Probe" />
+                </BaseRadioGroupItem>
+            </BaseRadioGroupRoot>);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("[role=radiogroup]"), "root");
+        HeadlessAssert.AssertPassThrough(cut.Find("[role=radio]"), "radio");
+        HeadlessAssert.AssertPassThrough(cut.Find("span"), "dot");
+    }
+
+    [Fact]
+    public void RadioGroup_RoleRadiogroup_NoNativeInput()
+    {
+        var cut = Render(@<BaseRadioGroupRoot aria-label="Size">@Items()</BaseRadioGroupRoot>);
+
+        Assert.Equal("radiogroup", cut.Find("div").GetAttribute("role"));
+        Assert.Empty(cut.FindAll("input"));
+        Assert.Equal("button", cut.Find("[role=radio]").GetAttribute("type"));
+        Assert.Equal(["false", "false", "false"], Checked(cut));
+    }
+
+    [Fact]
+    public void RadioGroup_RovingTabindex_ArrowsMoveAndCheck()
+    {
+        var cut = Render(@<BaseRadioGroupRoot>@Items(disableB: true)</BaseRadioGroupRoot>);
+        var focus = new FocusTracker(JSInterop).Observe(cut.FindAll("[role=radio]"), radio => radio.GetAttribute("aria-label")!);
+        Assert.Equal(["0", "-1", "-1"], TabIndexes(cut));
+
+        cut.FindAll("[role=radio]")[0].KeyDown(Keys.ArrowDown);
+        Assert.Equal(["false", "false", "true"], Checked(cut));
+        Assert.Equal(["-1", "-1", "0"], TabIndexes(cut));
+        Assert.Equal("C", focus.LastFocused);
+
+        cut.FindAll("[role=radio]")[2].KeyDown(Keys.ArrowRight);
+        Assert.Equal(["true", "false", "false"], Checked(cut));
+
+        cut.FindAll("[role=radio]")[0].KeyDown(Keys.ArrowLeft);
+        Assert.Equal(["false", "false", "true"], Checked(cut));
+
+        cut.FindAll("[role=radio]")[2].Click();
+        cut.FindAll("[role=radio]")[0].Click();
+        Assert.Equal(["true", "false", "false"], Checked(cut));
+        Assert.Equal(["0", "-1", "-1"], TabIndexes(cut));
+    }
+
+    [Fact]
+    public void RadioGroup_CheckedItemIsTabStop()
+    {
+        var cut = Render(@<BaseRadioGroupRoot DefaultValue="c">@Items()</BaseRadioGroupRoot>);
+
+        Assert.Equal(["-1", "-1", "0"], TabIndexes(cut));
+    }
+
+    [Fact]
+    public void RadioGroup_HiddenInput_WhenNameSet()
+    {
+        var cut = Render(@<BaseRadioGroupRoot Name="size" DefaultValue="b" Required>@Items()</BaseRadioGroupRoot>);
+
+        var input = cut.Find("input");
+        Assert.Equal("hidden", input.GetAttribute("type"));
+        Assert.Equal("size", input.GetAttribute("name"));
+        Assert.Equal("b", input.GetAttribute("value"));
+        Assert.Equal("true", cut.Find("[role=radiogroup]").GetAttribute("aria-required"));
+
+        cut.FindAll("[role=radio]")[2].Click();
+        Assert.Equal("c", cut.Find("input").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void RadioGroup_NonButtonItem_SpaceChecks()
+    {
+        var cut = Render(@<BaseRadioGroupRoot><BaseRadioGroupItem Value="a" As="div">A</BaseRadioGroupItem></BaseRadioGroupRoot>);
+
+        var radio = cut.Find("[role=radio]");
+        Assert.Equal("0", radio.GetAttribute("tabindex"));
+        radio.KeyDown(Keys.Space);
+        Assert.Equal("true", cut.Find("[role=radio]").GetAttribute("aria-checked"));
+    }
+
+    [Fact]
+    public void Controlled_Bind()
+    {
+        string? parent = "a";
+        var emitted = new List<string?>();
+        var cut = Render<BaseRadioGroupRoot>(parameters => parameters
+            .Add(p => p.Value, parent)
+            .Add(p => p.ValueChanged, value => { emitted.Add(value); parent = value; })
+            .Add(p => p.ChildContent, Items()));
+
+        cut.FindAll("[role=radio]")[1].Click();
+        Assert.Equal(["b"], emitted);
+        Assert.Equal(["true", "false", "false"], Checked(cut));
+
+        cut.Render(parameters => parameters.Add(p => p.Value, parent));
+        Assert.Equal(["false", "true", "false"], Checked(cut));
+    }
+
+    [Fact]
+    public void Uncontrolled_Default()
+    {
+        var cut = Render<BaseRadioGroupRoot>(parameters => parameters
+            .Add(p => p.DefaultValue, "a")
+            .Add(p => p.ChildContent, Items()));
+
+        cut.Render(parameters => parameters.Add(p => p.DefaultValue, "c"));
+        Assert.Equal(["true", "false", "false"], Checked(cut));
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        var item = Render(@<BaseRadioGroupRoot>@Items(disableB: true)</BaseRadioGroupRoot>);
+        item.FindAll("[role=radio]")[1].Click();
+        Assert.Equal(["false", "false", "false"], Checked(item));
+
+        var root = Render(@<BaseRadioGroupRoot Disabled>@Items()</BaseRadioGroupRoot>);
+        root.FindAll("[role=radio]")[0].Click();
+        root.FindAll("[role=radio]")[0].KeyDown(Keys.ArrowDown);
+        Assert.Equal(["false", "false", "false"], Checked(root));
+    }
+}

@@ -1,0 +1,173 @@
+@inherits BaseRzTestContext
+
+@code {
+    private static RenderFragment Items(bool disableB = false) =>
+        @<text>
+            <BaseToggleGroupItem Value="a" class="item">A</BaseToggleGroupItem>
+            <BaseToggleGroupItem Value="b" Disabled="disableB" class="item">B</BaseToggleGroupItem>
+            <BaseToggleGroupItem Value="c" class="item">C</BaseToggleGroupItem>
+        </text>;
+
+    private static string?[] Pressed<T>(IRenderedComponent<T> cut) where T : IComponent =>
+        cut.FindAll("button").Select(button => button.GetAttribute("aria-pressed")).ToArray();
+
+    private static string?[] TabIndexes<T>(IRenderedComponent<T> cut) where T : IComponent =>
+        cut.FindAll("button").Select(button => button.GetAttribute("tabindex")).ToArray();
+
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(@<BaseToggleGroupRoot aria-label="Align" class="root">@Items()</BaseToggleGroupRoot>);
+
+        var root = cut.Find("div[role=group].root");
+        Assert.Equal(3, root.QuerySelectorAll("button.item").Length);
+        Assert.Equal("button", cut.Find("button").GetAttribute("type"));
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(@<BaseToggleGroupRoot class="root">@Items()</BaseToggleGroupRoot>);
+
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "root", "item");
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var cut = Render(@<BaseToggleGroupRoot DefaultValue="a">@Items(disableB: true)</BaseToggleGroupRoot>);
+
+        var items = cut.FindAll("button");
+        Assert.Equal("on", items[0].GetAttribute("data-state"));
+        Assert.Equal("off", items[1].GetAttribute("data-state"));
+        Assert.True(items[1].HasAttribute("data-disabled"));
+        Assert.True(items[1].HasAttribute("disabled"));
+        Assert.Equal("horizontal", cut.Find("[role=group]").GetAttribute("data-orientation"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(
+            @<BaseToggleGroupRoot id="root" data-test="probe" aria-label="Probe">
+                <BaseToggleGroupItem Value="a" id="item" data-test="probe" aria-label="Probe">A</BaseToggleGroupItem>
+            </BaseToggleGroupRoot>);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("[role=group]"), "root");
+        HeadlessAssert.AssertPassThrough(cut.Find("button"), "item");
+    }
+
+    [Fact]
+    public void ToggleGroup_Single_UnpressesSiblings()
+    {
+        var cut = Render(@<BaseToggleGroupRoot>@Items()</BaseToggleGroupRoot>);
+
+        cut.FindAll("button")[0].Click();
+        Assert.Equal(["true", "false", "false"], Pressed(cut));
+
+        cut.FindAll("button")[2].Click();
+        Assert.Equal(["false", "false", "true"], Pressed(cut));
+
+        cut.FindAll("button")[2].Click();
+        Assert.Equal(["false", "false", "false"], Pressed(cut));
+    }
+
+    [Fact]
+    public void ToggleGroup_Multiple_Independent()
+    {
+        var cut = Render(@<BaseToggleGroupRoot Type="SelectionMode.Multiple">@Items()</BaseToggleGroupRoot>);
+
+        cut.FindAll("button")[0].Click();
+        cut.FindAll("button")[2].Click();
+        Assert.Equal(["true", "false", "true"], Pressed(cut));
+
+        cut.FindAll("button")[0].Click();
+        Assert.Equal(["false", "false", "true"], Pressed(cut));
+    }
+
+    [Fact]
+    public void ToggleGroup_RovingFocus_ArrowsMoveWithoutPressing()
+    {
+        var cut = Render(@<BaseToggleGroupRoot>@Items(disableB: true)</BaseToggleGroupRoot>);
+        var focus = new FocusTracker(JSInterop).Observe(cut.FindAll("button"), button => button.TextContent);
+        Assert.Equal(["0", "-1", "-1"], TabIndexes(cut));
+
+        cut.FindAll("button")[0].KeyDown(Keys.ArrowRight);
+        Assert.Equal("C", focus.LastFocused);
+        Assert.Equal(["-1", "-1", "0"], TabIndexes(cut));
+        Assert.Equal(["false", "false", "false"], Pressed(cut));
+
+        cut.FindAll("button")[2].KeyDown(Keys.Home);
+        Assert.Equal(["0", "-1", "-1"], TabIndexes(cut));
+    }
+
+    [Fact]
+    public void ToggleGroup_RovingFocusOff_EveryItemTabbable()
+    {
+        var cut = Render(@<BaseToggleGroupRoot RovingFocus="false">@Items()</BaseToggleGroupRoot>);
+
+        Assert.All(cut.FindAll("button"), button => Assert.False(button.HasAttribute("tabindex")));
+        cut.FindAll("button")[0].KeyDown(Keys.ArrowRight);
+        Assert.Equal(0, FocusAssert.FocusCount(JSInterop));
+    }
+
+    [Fact]
+    public void Controlled_Bind()
+    {
+        string? parent = null;
+        var emitted = new List<string?>();
+        var cut = Render<BaseToggleGroupRoot>(parameters => parameters
+            .Add(p => p.Value, parent)
+            .Add(p => p.ValueChanged, value => { emitted.Add(value); parent = value; })
+            .Add(p => p.ChildContent, Items()));
+
+        cut.FindAll("button")[1].Click();
+        Assert.Equal(["b"], emitted);
+        Assert.Equal(["false", "false", "false"], Pressed(cut));
+
+        cut.Render(parameters => parameters.Add(p => p.Value, parent));
+        Assert.Equal(["false", "true", "false"], Pressed(cut));
+
+        IReadOnlyCollection<string> values = ["c"];
+        var multiple = Render<BaseToggleGroupRoot>(parameters => parameters
+            .Add(p => p.Type, SelectionMode.Multiple)
+            .Add(p => p.Values, values)
+            .Add(p => p.ValuesChanged, next => values = next)
+            .Add(p => p.ChildContent, Items()));
+        multiple.FindAll("button")[0].Click();
+        Assert.Equal(["c", "a"], values);
+        multiple.Render(parameters => parameters.Add(p => p.Values, values));
+        Assert.Equal(["true", "false", "true"], Pressed(multiple));
+    }
+
+    [Fact]
+    public void Uncontrolled_Default()
+    {
+        var cut = Render<BaseToggleGroupRoot>(parameters => parameters
+            .Add(p => p.DefaultValue, "a")
+            .Add(p => p.ChildContent, Items()));
+
+        cut.Render(parameters => parameters.Add(p => p.DefaultValue, "c"));
+        Assert.Equal(["true", "false", "false"], Pressed(cut));
+
+        var multiple = Render(@<BaseToggleGroupRoot Type="SelectionMode.Multiple" DefaultValues="@(new[] { "a", "b" })">@Items()</BaseToggleGroupRoot>);
+        Assert.Equal(["true", "true", "false"], Pressed(multiple));
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        var item = Render(@<BaseToggleGroupRoot>@Items(disableB: true)</BaseToggleGroupRoot>);
+        item.FindAll("button")[1].Click();
+        Assert.Equal(["false", "false", "false"], Pressed(item));
+
+        var root = Render(@<BaseToggleGroupRoot Disabled>@Items()</BaseToggleGroupRoot>);
+        root.FindAll("button")[0].Click();
+        Assert.Equal(["false", "false", "false"], Pressed(root));
+        Assert.True(root.Find("[role=group]").HasAttribute("data-disabled"));
+
+        var asDiv = Render(@<BaseToggleGroupRoot Disabled><BaseToggleGroupItem Value="a" As="div">A</BaseToggleGroupItem></BaseToggleGroupRoot>);
+        asDiv.Find("[role=button]").KeyDown(Keys.Space);
+        Assert.Equal("false", asDiv.Find("[role=button]").GetAttribute("aria-pressed"));
+    }
+}

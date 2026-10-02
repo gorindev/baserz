@@ -1,0 +1,47 @@
+@page "/components/accordion"
+
+<PageTitle>Accordion - BaseRz</PageTitle>
+
+<h1>Accordion</h1>
+<p>
+    <code>BaseAccordionRoot</code> is a set of headed disclosure sections. Arrow keys, Home, and End move focus between
+    triggers without toggling; Enter or Space toggles.
+</p>
+
+<h2 class="h5">Single, controlled</h2>
+<BaseAccordionRoot @bind-Value="_single" class="demo-accordion mb-2">
+    @Sections()
+</BaseAccordionRoot>
+<p>Open item: <code>@(_single ?? "none")</code></p>
+
+<h2 class="h5">Single, not collapsible</h2>
+<BaseAccordionRoot DefaultValue="shipping" Collapsible="false" class="demo-accordion mb-3">
+    @Sections()
+</BaseAccordionRoot>
+
+<h2 class="h5">Multiple</h2>
+<BaseAccordionRoot Type="SelectionMode.Multiple" @bind-Values="_multiple" class="demo-accordion mb-2">
+    @Sections()
+</BaseAccordionRoot>
+<p>Open items: <code>@(_multiple.Count == 0 ? "none" : string.Join(", ", _multiple))</code></p>
+
+@code {
+    private string? _single;
+    private IReadOnlyCollection<string> _multiple = ["returns"];
+
+    private static RenderFragment Sections() =>
+        @<text>
+            <BaseAccordionItem Value="shipping">
+                <BaseAccordionHeader class="h6 m-0"><BaseAccordionTrigger class="btn btn-link">Shipping</BaseAccordionTrigger></BaseAccordionHeader>
+                <BaseAccordionContent class="demo-panel">Orders ship within two business days.</BaseAccordionContent>
+            </BaseAccordionItem>
+            <BaseAccordionItem Value="gift" Disabled>
+                <BaseAccordionHeader class="h6 m-0"><BaseAccordionTrigger class="btn btn-link">Gift wrap (disabled)</BaseAccordionTrigger></BaseAccordionHeader>
+                <BaseAccordionContent class="demo-panel">Unavailable.</BaseAccordionContent>
+            </BaseAccordionItem>
+            <BaseAccordionItem Value="returns">
+                <BaseAccordionHeader class="h6 m-0"><BaseAccordionTrigger class="btn btn-link">Returns</BaseAccordionTrigger></BaseAccordionHeader>
+                <BaseAccordionContent class="demo-panel">Returns are accepted for 30 days.</BaseAccordionContent>
+            </BaseAccordionItem>
+        </text>;
+}

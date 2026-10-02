@@ -1,0 +1,37 @@
+@page "/components/tabs"
+
+<PageTitle>Tabs - BaseRz</PageTitle>
+
+<h1>Tabs</h1>
+<p>
+    <code>BaseTabsRoot</code> renders a <code>tablist</code> with a single tab stop. Arrow keys, Home, and End move focus
+    and activate the tab (automatic activation); disabled tabs are skipped.
+</p>
+
+<BaseTabsRoot @bind-Value="_tab" class="mb-2">
+    <BaseTabsList aria-label="Account" class="nav nav-tabs">
+        <BaseTabsTrigger Value="profile" class="nav-link demo-tab">Profile</BaseTabsTrigger>
+        <BaseTabsTrigger Value="billing" Disabled class="nav-link demo-tab">Billing</BaseTabsTrigger>
+        <BaseTabsTrigger Value="security" class="nav-link demo-tab">Security</BaseTabsTrigger>
+    </BaseTabsList>
+    <BaseTabsContent Value="profile" class="demo-panel">Name, avatar, and bio.</BaseTabsContent>
+    <BaseTabsContent Value="billing" class="demo-panel">Payment methods.</BaseTabsContent>
+    <BaseTabsContent Value="security" class="demo-panel">Passwords and sessions.</BaseTabsContent>
+</BaseTabsRoot>
+<p>Controlled: <code>@_tab</code></p>
+
+<h2 class="h5 mt-4">Vertical, uncontrolled</h2>
+<BaseTabsRoot DefaultValue="two" Orientation="Orientation.Vertical" class="d-flex gap-3">
+    <BaseTabsList aria-label="Vertical example" class="nav flex-column nav-pills">
+        <BaseTabsTrigger Value="one" class="nav-link demo-tab">One</BaseTabsTrigger>
+        <BaseTabsTrigger Value="two" class="nav-link demo-tab">Two</BaseTabsTrigger>
+        <BaseTabsTrigger Value="three" class="nav-link demo-tab">Three</BaseTabsTrigger>
+    </BaseTabsList>
+    <BaseTabsContent Value="one" class="demo-panel">Panel one.</BaseTabsContent>
+    <BaseTabsContent Value="two" class="demo-panel">Panel two.</BaseTabsContent>
+    <BaseTabsContent Value="three" class="demo-panel">Panel three.</BaseTabsContent>
+</BaseTabsRoot>
+
+@code {
+    private string? _tab = "profile";
+}

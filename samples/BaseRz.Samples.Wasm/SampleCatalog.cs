@@ -20,4 +20,17 @@ public static class SampleCatalog
         new("Toggle", "components/toggle", "Two-state button with aria-pressed."),
         new("VisuallyHidden", "components/visually-hidden", "Content for assistive technology only."),
     ];
+
+    public static IReadOnlyList<SampleEntry> P2 { get; } =
+    [
+        new("Accordion", "components/accordion", "Single or multiple disclosure sections with roving arrow-key focus between triggers."),
+        new("Checkbox", "components/checkbox", "role=\"checkbox\" button with checked, unchecked, and mixed states."),
+        new("CheckboxGroup", "components/checkbox-group", "Labeled group of checkboxes sharing a value list."),
+        new("Collapsible", "components/collapsible", "Single trigger wired to its content by aria-expanded / aria-controls."),
+        new("RadioGroup", "components/radio-group", "role=\"radiogroup\" where arrow keys move focus and selection together."),
+        new("Switch", "components/switch", "role=\"switch\" on/off control with a thumb part."),
+        new("Tabs", "components/tabs", "Tablist with roving focus and automatic activation."),
+        new("ToggleGroup", "components/toggle-group", "Single or multiple pressed buttons with roving focus."),
+        new("TreeView", "components/tree-view", "Hierarchical tree with expand, collapse, and selection from the keyboard."),
+    ];
 }

@@ -115,3 +115,101 @@ Parts: `BaseVisuallyHiddenRoot` (`span`).
 - Hides content visually while keeping it in the accessibility tree: an inline clip style (`position: absolute`, 1px box, `overflow: hidden`, `clip: rect(0, 0, 0, 0)`, `white-space: nowrap`), followed by the caller's `style`.
 - The style is inline because BaseRz emits no classes of its own and `baserz-reset.css` is opt-in.
 - Never uses `display: none`, `visibility: hidden`, or `aria-hidden`, all of which would remove the content from assistive technology.
+
+---
+
+## P2 — Disclosure and roving focus
+
+Shared behavior for the composite widgets below:
+
+- **Roving tabindex.** Accordion, Tabs, ToggleGroup, TreeView, and RadioGroup expose a single tab stop. The active item has `tabindex="0"` and the rest `-1`; arrow keys move it and call `FocusAsync` on the target. Disabled items are skipped. `Loop` (default `true`) wraps from the last item to the first; `Direction="Rtl"` swaps Left/Right in horizontal groups.
+- **Disclosure content** (Collapsible, Accordion) stays in the DOM when closed with `hidden` and `inert`, so ids referenced by `aria-controls` always resolve. To animate, override `[hidden]` in CSS and key off `data-state="open|closed"`.
+- **Ids.** Generated ids are derived from the root id (`{root}-trigger`, `{root}-content`, …). Passing `id` on a part overrides it and the paired `aria-controls` / `aria-labelledby` follows.
+- **State** is controlled with `@bind-…` or uncontrolled with `Default…`; later `Default…` changes are ignored.
+- **Form values.** Checkable controls are buttons with ARIA roles, never visible native checkbox or radio inputs. Setting `Name` adds an `<input type="hidden">` carrying the value while checked.
+- **Known limits.** Without JS interop Blazor cannot conditionally `preventDefault` for single keys, so Space and arrow keys may also scroll a scrollable container. On native buttons the browser's own Enter activation still fires for radios and checkboxes (APG reserves Enter for forms).
+
+## BaseCollapsible
+
+Parts: `BaseCollapsibleRoot` (`div`), `BaseCollapsibleTrigger` (`button`), `BaseCollapsibleContent` (`div`).
+
+- APG disclosure. Trigger has `aria-expanded` and `aria-controls` pointing at Content; Content is `role="region"` with `aria-labelledby` pointing at Trigger.
+- `@bind-Open` / `DefaultOpen`. `Disabled` disables the trigger and ignores input.
+- Root, Trigger, and Content carry `data-state="open|closed"`; `data-disabled` when disabled.
+- Native trigger relies on the browser for Enter/Space; with `As` set to another element it gets `role="button"`, a tab stop, and Enter/Space toggling.
+
+## BaseAccordion
+
+Parts: `BaseAccordionRoot` (`div`), `BaseAccordionItem` (`div`), `BaseAccordionHeader` (`h3`), `BaseAccordionTrigger` (`button`), `BaseAccordionContent` (`div`).
+
+- APG accordion. Each Trigger sits inside a Header, has `aria-expanded` and `aria-controls`; each Content is `role="region"` labeled by its Trigger.
+- `Type="SelectionMode.Single"` (default) uses `@bind-Value` / `DefaultValue`; `SelectionMode.Multiple` uses `@bind-Values` / `DefaultValues`.
+- `Collapsible` (default `true`) lets the open single item close. With `Collapsible="false"` the open trigger gets `aria-disabled="true"` because it cannot be closed.
+- Up/Down (Left/Right when `Orientation="Horizontal"`), Home, and End move focus between triggers without toggling; Enter/Space toggle.
+- Header defaults to `h3`; set `As` to fit the page's heading outline.
+- `data-state="open|closed"` on Item, Header, Trigger, and Content; `data-disabled` on disabled items; `data-orientation` on Root and Trigger.
+
+## BaseTabs
+
+Parts: `BaseTabsRoot` (`div`), `BaseTabsList` (`div`), `BaseTabsTrigger` (`button`), `BaseTabsContent` (`div`).
+
+- APG tabs with automatic activation: List is `role="tablist"` with `aria-orientation`; each Trigger is `role="tab"` with `aria-selected` and `aria-controls`; each Content is `role="tabpanel"`, `tabindex="0"`, labeled by its Trigger, and `hidden` when inactive.
+- The selected tab is the tab stop. Left/Right (Up/Down when vertical), Home, and End move focus and select; disabled tabs are skipped.
+- Label the List with `aria-label` or `aria-labelledby`.
+- `data-state="active|inactive"` on Trigger and Content; `data-orientation` on Root, List, Trigger, and Content; `data-disabled` on disabled triggers.
+
+## BaseToggleGroup
+
+Parts: `BaseToggleGroupRoot` (`div`), `BaseToggleGroupItem` (`button`).
+
+- Root is `role="group"`; label it with `aria-label` or `aria-labelledby`. Items are toggle buttons with `aria-pressed` and `data-state="on|off"`.
+- `Type="SelectionMode.Single"` (default) uses `@bind-Value`; pressing the pressed item clears it. `SelectionMode.Multiple` uses `@bind-Values`.
+- Arrow keys, Home, and End move focus only; Enter/Space toggle. `RovingFocus="false"` gives every item its own tab stop and disables arrow navigation.
+- `data-orientation` on Root (default horizontal); `data-disabled` on disabled items.
+
+## BaseTreeView
+
+Parts: `BaseTreeViewRoot` (`ul`), `BaseTreeViewItem` (`li`), `BaseTreeViewTrigger` (`div`), `BaseTreeViewContent` (`ul`).
+
+- APG tree view, single select. Root is `role="tree"` (label it); each Item is `role="treeitem"` with `aria-level`, `aria-selected`, and `aria-labelledby` pointing at its Trigger. Items with Content also get `aria-expanded` and `data-state="open|closed"`.
+- Content is `role="group"` and is rendered only while its item is expanded.
+- Down/Up move through visible items, Home/End to the first/last visible item; Right expands a closed branch or moves into an open one; Left collapses an open branch or moves to the parent; Enter/Space select. Clicking a Trigger selects and toggles.
+- `@bind-Value` / `DefaultValue` for the selected item; `@bind-ExpandedValues` / `DefaultExpandedValues` for open branches.
+- `data-selected` on the selected item; disabled items get `aria-disabled="true"` and `data-disabled` and are skipped.
+
+## BaseRadioGroup
+
+Parts: `BaseRadioGroupRoot` (`div`), `BaseRadioGroupItem` (`button`), `BaseRadioGroupIndicator` (`span`).
+
+- APG radio group: Root is `role="radiogroup"` (label it), with `aria-required` and `aria-disabled` when set; Items are `role="radio"` with `aria-checked`.
+- The checked item (or the first enabled one) is the tab stop. Arrow keys move focus and check the target; Space checks the focused item.
+- `Orientation` is optional; when set it adds `aria-orientation` and `data-orientation`. Both arrow axes work either way.
+- `@bind-Value` / `DefaultValue`. `Name` adds a hidden input with the checked value.
+- Indicator renders only while its item is checked. `data-state="checked|unchecked"` on Item.
+
+## BaseCheckbox
+
+Parts: `BaseCheckboxRoot` (`button`), `BaseCheckboxIndicator` (`span`).
+
+- APG checkbox: `role="checkbox"` with `aria-checked="true|false|mixed"` and `data-state="checked|unchecked|indeterminate"`.
+- `@bind-Checked` / `DefaultChecked` and `@bind-Indeterminate` / `DefaultIndeterminate`. Activating an indeterminate checkbox clears indeterminate and checks it.
+- Space toggles (native buttons also handle it themselves). `Required` sets `aria-required`.
+- Inside a CheckboxGroup a checkbox with `Value` reads and writes the group's values instead of its own state.
+- `Name` adds a hidden input with `Value` (default `on`) while checked. Indicator renders only while checked or indeterminate.
+
+## BaseCheckboxGroup
+
+Parts: `BaseCheckboxGroupRoot` (`div`), `BaseCheckboxGroupLabel` (`span`), `BaseCheckboxGroupDescription` (`div`), `BaseCheckboxGroupErrorMessage` (`div`).
+
+- Root is `role="group"`. A mounted Label is referenced by `aria-labelledby` (unless the caller passes `aria-label`); Description and ErrorMessage are added to `aria-describedby`.
+- A mounted ErrorMessage sets `aria-invalid="true"` on the root and has `role="alert"`; mount it when the error appears.
+- `@bind-Values` / `DefaultValues`. `Disabled` disables every checkbox in the group; `Name` is used by checkboxes that do not set their own.
+
+## BaseSwitch
+
+Parts: `BaseSwitchRoot` (`button`), `BaseSwitchThumb` (`span`).
+
+- APG switch: `role="switch"` with `aria-checked="true|false"`.
+- `@bind-Checked` / `DefaultChecked`. Enter/Space toggle on non-native elements. `Required` sets `aria-required`.
+- Root and Thumb carry `data-state="checked|unchecked"`; `data-disabled` when disabled.
+- `Name` adds a hidden input with `Value` (default `on`) while on.

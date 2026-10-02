@@ -1,0 +1,141 @@
+@inherits BaseRzTestContext
+
+@code {
+    private static RenderFragment Boxes(bool error = false) =>
+        @<text>
+            <BaseCheckboxGroupLabel class="label">Toppings</BaseCheckboxGroupLabel>
+            <BaseCheckboxGroupDescription class="description">Pick any.</BaseCheckboxGroupDescription>
+            <BaseCheckboxRoot Value="cheese" aria-label="Cheese" />
+            <BaseCheckboxRoot Value="ham" aria-label="Ham" />
+            <BaseCheckboxRoot Value="olives" aria-label="Olives" />
+            @if (error)
+            {
+                <BaseCheckboxGroupErrorMessage class="error">Pick at least one.</BaseCheckboxGroupErrorMessage>
+            }
+        </text>;
+
+    private static string?[] Checked<T>(IRenderedComponent<T> cut) where T : IComponent =>
+        cut.FindAll("[role=checkbox]").Select(box => box.GetAttribute("aria-checked")).ToArray();
+
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(@<BaseCheckboxGroupRoot class="root">@Boxes(error: true)</BaseCheckboxGroupRoot>);
+
+        var root = cut.Find("div[role=group].root");
+        Assert.Equal("Toppings", root.QuerySelector("span.label")!.TextContent);
+        Assert.Equal("Pick any.", root.QuerySelector("div.description")!.TextContent);
+        Assert.Equal("alert", root.QuerySelector("div.error")!.GetAttribute("role"));
+        Assert.Equal(3, root.QuerySelectorAll("[role=checkbox]").Length);
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(@<BaseCheckboxGroupRoot class="root">@Boxes(error: true)</BaseCheckboxGroupRoot>);
+
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "root", "label", "description", "error");
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var cut = Render(@<BaseCheckboxGroupRoot Disabled DefaultValues="@(new[] { "ham" })">@Boxes()</BaseCheckboxGroupRoot>);
+
+        Assert.True(cut.Find("[role=group]").HasAttribute("data-disabled"));
+        Assert.All(cut.FindAll("[role=checkbox]"), box => Assert.True(box.HasAttribute("disabled")));
+        Assert.Equal("checked", cut.FindAll("[role=checkbox]")[1].GetAttribute("data-state"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(
+            @<BaseCheckboxGroupRoot id="root" data-test="probe" aria-label="Probe">
+                <BaseCheckboxGroupLabel id="label" data-test="probe" aria-label="Probe">L</BaseCheckboxGroupLabel>
+                <BaseCheckboxGroupDescription id="description" data-test="probe" aria-label="Probe">D</BaseCheckboxGroupDescription>
+                <BaseCheckboxGroupErrorMessage id="error" data-test="probe" aria-label="Probe">E</BaseCheckboxGroupErrorMessage>
+            </BaseCheckboxGroupRoot>);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("[role=group]"), "root");
+        HeadlessAssert.AssertPassThrough(cut.Find("span"), "label");
+        HeadlessAssert.AssertPassThrough(cut.Find("#description"), "description");
+        HeadlessAssert.AssertPassThrough(cut.Find("#error"), "error");
+        Assert.Equal("description error", cut.Find("[role=group]").GetAttribute("aria-describedby"));
+    }
+
+    [Fact]
+    public void CheckboxGroup_CollectionValue_DescribedByError()
+    {
+        var cut = Render<BaseCheckboxGroupRoot>(parameters => parameters.Add(p => p.ChildContent, Boxes()));
+
+        var group = cut.Find("[role=group]");
+        Assert.Equal(cut.Find("span").Id, group.GetAttribute("aria-labelledby"));
+        Assert.Equal(cut.Find("div.description").Id, group.GetAttribute("aria-describedby"));
+        Assert.False(group.HasAttribute("aria-invalid"));
+
+        cut.FindAll("[role=checkbox]")[0].Click();
+        cut.FindAll("[role=checkbox]")[2].Click();
+        Assert.Equal(["true", "false", "true"], Checked(cut));
+
+        cut.Render(parameters => parameters.Add(p => p.ChildContent, Boxes(error: true)));
+        group = cut.Find("[role=group]");
+        Assert.Equal($"{cut.Find("div.description").Id} {cut.Find("div.error").Id}", group.GetAttribute("aria-describedby"));
+        Assert.Equal("true", group.GetAttribute("aria-invalid"));
+
+        cut.Render(parameters => parameters.Add(p => p.ChildContent, Boxes()));
+        Assert.Equal(cut.Find("div.description").Id, cut.Find("[role=group]").GetAttribute("aria-describedby"));
+        Assert.False(cut.Find("[role=group]").HasAttribute("aria-invalid"));
+    }
+
+    [Fact]
+    public void CheckboxGroup_HiddenInputs_UseGroupName()
+    {
+        var cut = Render(@<BaseCheckboxGroupRoot Name="toppings" DefaultValues="@(new[] { "ham", "olives" })">@Boxes()</BaseCheckboxGroupRoot>);
+
+        var inputs = cut.FindAll("input[type=hidden]");
+        Assert.Equal(["ham", "olives"], inputs.Select(input => input.GetAttribute("value")));
+        Assert.All(inputs, input => Assert.Equal("toppings", input.GetAttribute("name")));
+    }
+
+    [Fact]
+    public void Controlled_Bind()
+    {
+        IReadOnlyCollection<string> parent = ["ham"];
+        var emitted = new List<IReadOnlyCollection<string>>();
+        var cut = Render<BaseCheckboxGroupRoot>(parameters => parameters
+            .Add(p => p.Values, parent)
+            .Add(p => p.ValuesChanged, value => { emitted.Add(value); parent = value; })
+            .Add(p => p.ChildContent, Boxes()));
+
+        cut.FindAll("[role=checkbox]")[0].Click();
+        Assert.Equal(["ham", "cheese"], Assert.Single(emitted));
+        Assert.Equal(["false", "true", "false"], Checked(cut));
+
+        cut.Render(parameters => parameters.Add(p => p.Values, parent));
+        Assert.Equal(["true", "true", "false"], Checked(cut));
+    }
+
+    [Fact]
+    public void Uncontrolled_Default()
+    {
+        var cut = Render<BaseCheckboxGroupRoot>(parameters => parameters
+            .Add(p => p.DefaultValues, new[] { "olives" })
+            .Add(p => p.ChildContent, Boxes()));
+
+        cut.Render(parameters => parameters.Add(p => p.DefaultValues, new[] { "ham" }));
+        Assert.Equal(["false", "false", "true"], Checked(cut));
+
+        cut.FindAll("[role=checkbox]")[2].Click();
+        Assert.Equal(["false", "false", "false"], Checked(cut));
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        var cut = Render(@<BaseCheckboxGroupRoot Disabled>@Boxes()</BaseCheckboxGroupRoot>);
+
+        cut.FindAll("[role=checkbox]")[0].Click();
+        Assert.Equal(["false", "false", "false"], Checked(cut));
+    }
+}

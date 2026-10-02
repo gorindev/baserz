@@ -1,0 +1,153 @@
+@inherits BaseRzTestContext
+
+@code {
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(@<BaseCheckboxRoot DefaultChecked class="box" aria-label="Accept"><BaseCheckboxIndicator class="check">✓</BaseCheckboxIndicator></BaseCheckboxRoot>);
+
+        var box = cut.Find("button[role=checkbox].box");
+        Assert.Equal("button", box.GetAttribute("type"));
+        Assert.Equal("✓", box.QuerySelector("span.check")!.TextContent);
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(@<BaseCheckboxRoot DefaultChecked class="box"><BaseCheckboxIndicator class="check" /></BaseCheckboxRoot>);
+
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "box", "check");
+        Assert.Empty(cut.FindAll("svg"));
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var unchecked_ = Render(@<BaseCheckboxRoot><BaseCheckboxIndicator /></BaseCheckboxRoot>);
+        Assert.Equal("unchecked", unchecked_.Find("button").GetAttribute("data-state"));
+        Assert.Empty(unchecked_.FindAll("span"));
+
+        var checked_ = Render(@<BaseCheckboxRoot DefaultChecked Disabled><BaseCheckboxIndicator /></BaseCheckboxRoot>);
+        Assert.Equal("checked", checked_.Find("button").GetAttribute("data-state"));
+        Assert.Equal("checked", checked_.Find("span").GetAttribute("data-state"));
+        Assert.True(checked_.Find("button").HasAttribute("data-disabled"));
+        Assert.True(checked_.Find("button").HasAttribute("disabled"));
+
+        var mixed = Render(@<BaseCheckboxRoot DefaultIndeterminate><BaseCheckboxIndicator /></BaseCheckboxRoot>);
+        Assert.Equal("indeterminate", mixed.Find("button").GetAttribute("data-state"));
+        Assert.Equal("indeterminate", mixed.Find("span").GetAttribute("data-state"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(
+            @<BaseCheckboxRoot DefaultChecked id="box" data-test="probe" aria-label="Probe">
+                <BaseCheckboxIndicator id="check" data-test="probe" aria-label="Probe" />
+            </BaseCheckboxRoot>);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("button"), "box");
+        HeadlessAssert.AssertPassThrough(cut.Find("span"), "check");
+    }
+
+    [Fact]
+    public void Checkbox_RoleCheckbox_NoNativeInput_ClickToggles()
+    {
+        var cut = Render(@<BaseCheckboxRoot aria-label="Accept" Required />);
+
+        Assert.Empty(cut.FindAll("input"));
+        Assert.Equal("false", cut.Find("[role=checkbox]").GetAttribute("aria-checked"));
+        Assert.Equal("true", cut.Find("[role=checkbox]").GetAttribute("aria-required"));
+
+        cut.Find("button").Click();
+        Assert.Equal("true", cut.Find("[role=checkbox]").GetAttribute("aria-checked"));
+        cut.Find("button").Click();
+        Assert.Equal("false", cut.Find("[role=checkbox]").GetAttribute("aria-checked"));
+    }
+
+    [Fact]
+    public void Checkbox_Indeterminate_AriaCheckedMixed_ActivationSetsCheckedAndClearsIndeterminate()
+    {
+        var emitted = new List<bool>();
+        var cut = Render<BaseCheckboxRoot>(parameters => parameters
+            .Add(p => p.DefaultIndeterminate, true)
+            .Add(p => p.IndeterminateChanged, emitted.Add));
+        Assert.Equal("mixed", cut.Find("button").GetAttribute("aria-checked"));
+
+        cut.Find("button").Click();
+        Assert.Equal("true", cut.Find("button").GetAttribute("aria-checked"));
+        Assert.Equal("checked", cut.Find("button").GetAttribute("data-state"));
+        Assert.Equal([false], emitted);
+
+        cut.Find("button").Click();
+        Assert.Equal("false", cut.Find("button").GetAttribute("aria-checked"));
+    }
+
+    [Fact]
+    public void Checkbox_NonButtonElement_TogglesOnSpaceOnly()
+    {
+        var cut = Render(@<BaseCheckboxRoot As="span" aria-label="Accept" />);
+
+        var box = cut.Find("span");
+        Assert.Equal("0", box.GetAttribute("tabindex"));
+        box.KeyDown(Keys.Enter);
+        Assert.Equal("false", cut.Find("span").GetAttribute("aria-checked"));
+        cut.Find("span").KeyDown(Keys.Space);
+        Assert.Equal("true", cut.Find("span").GetAttribute("aria-checked"));
+    }
+
+    [Fact]
+    public void Checkbox_HiddenInput_WhenNameSetAndChecked()
+    {
+        var cut = Render(@<BaseCheckboxRoot Name="terms" />);
+        Assert.Empty(cut.FindAll("input"));
+
+        cut.Find("button").Click();
+        var input = cut.Find("input");
+        Assert.Equal("hidden", input.GetAttribute("type"));
+        Assert.Equal("terms", input.GetAttribute("name"));
+        Assert.Equal("on", input.GetAttribute("value"));
+    }
+
+    [Fact]
+    public void Controlled_Bind()
+    {
+        var parent = false;
+        var emitted = new List<bool>();
+        var cut = Render<BaseCheckboxRoot>(parameters => parameters
+            .Add(p => p.Checked, parent)
+            .Add(p => p.CheckedChanged, value => { emitted.Add(value); parent = value; }));
+
+        cut.Find("button").Click();
+        Assert.Equal([true], emitted);
+        Assert.Equal("false", cut.Find("button").GetAttribute("aria-checked"));
+
+        cut.Render(parameters => parameters.Add(p => p.Checked, parent));
+        Assert.Equal("true", cut.Find("button").GetAttribute("aria-checked"));
+    }
+
+    [Fact]
+    public void Uncontrolled_Default()
+    {
+        var cut = Render<BaseCheckboxRoot>(parameters => parameters.Add(p => p.DefaultChecked, true));
+
+        cut.Render(parameters => parameters.Add(p => p.DefaultChecked, false));
+        Assert.Equal("true", cut.Find("button").GetAttribute("aria-checked"));
+
+        cut.Find("button").Click();
+        Assert.Equal("false", cut.Find("button").GetAttribute("aria-checked"));
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        var cut = Render(@<BaseCheckboxRoot Disabled />);
+        cut.Find("button").Click();
+        Assert.Equal("false", cut.Find("button").GetAttribute("aria-checked"));
+
+        var asDiv = Render(@<BaseCheckboxRoot As="div" Disabled />);
+        asDiv.Find("div").KeyDown(Keys.Space);
+        Assert.Equal("false", asDiv.Find("div").GetAttribute("aria-checked"));
+        Assert.Equal("true", asDiv.Find("div").GetAttribute("aria-disabled"));
+    }
+}

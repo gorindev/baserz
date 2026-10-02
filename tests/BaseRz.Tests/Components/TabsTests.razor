@@ -1,0 +1,198 @@
+@inherits BaseRzTestContext
+
+@code {
+    private static RenderFragment Parts(bool disableB = false) =>
+        @<text>
+            <BaseTabsList class="list">
+                <BaseTabsTrigger Value="a" class="tab">A</BaseTabsTrigger>
+                <BaseTabsTrigger Value="b" Disabled="disableB" class="tab">B</BaseTabsTrigger>
+                <BaseTabsTrigger Value="c" class="tab">C</BaseTabsTrigger>
+            </BaseTabsList>
+            <BaseTabsContent Value="a" class="panel">Panel A</BaseTabsContent>
+            <BaseTabsContent Value="b" class="panel">Panel B</BaseTabsContent>
+            <BaseTabsContent Value="c" class="panel">Panel C</BaseTabsContent>
+        </text>;
+
+    private static string?[] Selected<T>(IRenderedComponent<T> cut) where T : IComponent =>
+        cut.FindAll("[role=tab]").Select(tab => tab.GetAttribute("aria-selected")).ToArray();
+
+    private static string?[] TabIndexes<T>(IRenderedComponent<T> cut) where T : IComponent =>
+        cut.FindAll("[role=tab]").Select(tab => tab.GetAttribute("tabindex")).ToArray();
+
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(@<BaseTabsRoot DefaultValue="a" class="root">@Parts()</BaseTabsRoot>);
+
+        var root = cut.Find("div.root");
+        Assert.NotNull(root.QuerySelector("[role=tablist].list"));
+        Assert.Equal(3, root.QuerySelectorAll("button[role=tab]").Length);
+        Assert.Equal(3, root.QuerySelectorAll("[role=tabpanel]").Length);
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(@<BaseTabsRoot DefaultValue="a" class="root">@Parts()</BaseTabsRoot>);
+
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "root", "list", "tab", "panel");
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var cut = Render(@<BaseTabsRoot DefaultValue="a">@Parts(disableB: true)</BaseTabsRoot>);
+
+        var tabs = cut.FindAll("[role=tab]");
+        Assert.Equal("active", tabs[0].GetAttribute("data-state"));
+        Assert.Equal("inactive", tabs[1].GetAttribute("data-state"));
+        Assert.True(tabs[1].HasAttribute("data-disabled"));
+        Assert.True(tabs[1].HasAttribute("disabled"));
+        Assert.Equal("active", cut.FindAll("[role=tabpanel]")[0].GetAttribute("data-state"));
+        Assert.Equal("horizontal", cut.Find("[role=tablist]").GetAttribute("data-orientation"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(
+            @<BaseTabsRoot DefaultValue="a" id="root" data-test="probe" aria-label="Probe">
+                <BaseTabsList id="list" data-test="probe" aria-label="Probe">
+                    <BaseTabsTrigger Value="a" id="tab" data-test="probe" aria-label="Probe">A</BaseTabsTrigger>
+                </BaseTabsList>
+                <BaseTabsContent Value="a" id="panel" data-test="probe" aria-label="Probe">P</BaseTabsContent>
+            </BaseTabsRoot>);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("#root"), "root");
+        HeadlessAssert.AssertPassThrough(cut.Find("[role=tablist]"), "list");
+        HeadlessAssert.AssertPassThrough(cut.Find("[role=tab]"), "tab");
+        HeadlessAssert.AssertPassThrough(cut.Find("[role=tabpanel]"), "panel");
+        Assert.Equal("panel", cut.Find("[role=tab]").GetAttribute("aria-controls"));
+        Assert.Equal("tab", cut.Find("[role=tabpanel]").GetAttribute("aria-labelledby"));
+    }
+
+    [Fact]
+    public void Tabs_TablistTabTabpanel_Ids()
+    {
+        var cut = Render(@<BaseTabsRoot DefaultValue="b">@Parts()</BaseTabsRoot>);
+
+        Assert.Equal("horizontal", cut.Find("[role=tablist]").GetAttribute("aria-orientation"));
+        var tabs = cut.FindAll("[role=tab]");
+        var panels = cut.FindAll("[role=tabpanel]");
+        for (var i = 0; i < 3; i++)
+        {
+            Assert.Equal(panels[i].Id, tabs[i].GetAttribute("aria-controls"));
+            Assert.Equal(tabs[i].Id, panels[i].GetAttribute("aria-labelledby"));
+            Assert.Equal("0", panels[i].GetAttribute("tabindex"));
+        }
+
+        Assert.Equal(3, tabs.Select(tab => tab.Id).Distinct().Count());
+        Assert.True(panels[0].HasAttribute("hidden"));
+        Assert.False(panels[1].HasAttribute("hidden"));
+    }
+
+    [Fact]
+    public void Tabs_AriaSelected_TabIndex_FollowSelection()
+    {
+        var cut = Render(@<BaseTabsRoot DefaultValue="b">@Parts()</BaseTabsRoot>);
+        Assert.Equal(["false", "true", "false"], Selected(cut));
+        Assert.Equal(["-1", "0", "-1"], TabIndexes(cut));
+
+        cut.FindAll("[role=tab]")[2].Click();
+        Assert.Equal(["false", "false", "true"], Selected(cut));
+        Assert.Equal(["-1", "-1", "0"], TabIndexes(cut));
+
+        var none = Render(@<BaseTabsRoot>@Parts()</BaseTabsRoot>);
+        Assert.Equal(["0", "-1", "-1"], TabIndexes(none));
+    }
+
+    [Fact]
+    public void Tabs_AutomaticActivation_OnArrows_HomeEnd_SkipsDisabled()
+    {
+        var cut = Render(@<BaseTabsRoot DefaultValue="a">@Parts(disableB: true)</BaseTabsRoot>);
+        var focus = new FocusTracker(JSInterop).Observe(cut.FindAll("[role=tab]"), tab => tab.TextContent);
+
+        cut.FindAll("[role=tab]")[0].KeyDown(Keys.ArrowRight);
+        Assert.Equal(["false", "false", "true"], Selected(cut));
+        Assert.Equal("C", focus.LastFocused);
+
+        cut.FindAll("[role=tab]")[2].KeyDown(Keys.ArrowRight);
+        Assert.Equal(["true", "false", "false"], Selected(cut));
+
+        cut.FindAll("[role=tab]")[0].KeyDown(Keys.End);
+        Assert.Equal(["false", "false", "true"], Selected(cut));
+
+        cut.FindAll("[role=tab]")[2].KeyDown(Keys.Home);
+        Assert.Equal(["true", "false", "false"], Selected(cut));
+
+        cut.FindAll("[role=tab]")[0].KeyDown(Keys.ArrowDown);
+        Assert.Equal(["true", "false", "false"], Selected(cut));
+    }
+
+    [Fact]
+    public void Tabs_Vertical_UsesUpDown()
+    {
+        var cut = Render(@<BaseTabsRoot DefaultValue="a" Orientation="Orientation.Vertical">@Parts()</BaseTabsRoot>);
+        Assert.Equal("vertical", cut.Find("[role=tablist]").GetAttribute("aria-orientation"));
+
+        cut.FindAll("[role=tab]")[0].KeyDown(Keys.ArrowRight);
+        Assert.Equal(["true", "false", "false"], Selected(cut));
+
+        cut.FindAll("[role=tab]")[0].KeyDown(Keys.ArrowDown);
+        Assert.Equal(["false", "true", "false"], Selected(cut));
+    }
+
+    [Fact]
+    public void Tabs_Rtl_ReversesLeftRight()
+    {
+        var cut = Render(@<BaseTabsRoot DefaultValue="a" Direction="Direction.Rtl">@Parts()</BaseTabsRoot>);
+
+        cut.FindAll("[role=tab]")[0].KeyDown(Keys.ArrowLeft);
+        Assert.Equal(["false", "true", "false"], Selected(cut));
+    }
+
+    [Fact]
+    public void Controlled_Bind()
+    {
+        string? parent = "a";
+        var emitted = new List<string?>();
+        var cut = Render<BaseTabsRoot>(parameters => parameters
+            .Add(p => p.Value, parent)
+            .Add(p => p.ValueChanged, value => { emitted.Add(value); parent = value; })
+            .Add(p => p.ChildContent, Parts()));
+
+        cut.FindAll("[role=tab]")[1].Click();
+        Assert.Equal(["b"], emitted);
+        Assert.Equal(["true", "false", "false"], Selected(cut));
+
+        cut.Render(parameters => parameters.Add(p => p.Value, parent));
+        Assert.Equal(["false", "true", "false"], Selected(cut));
+    }
+
+    [Fact]
+    public void Uncontrolled_Default()
+    {
+        var cut = Render<BaseTabsRoot>(parameters => parameters
+            .Add(p => p.DefaultValue, "a")
+            .Add(p => p.ChildContent, Parts()));
+
+        cut.Render(parameters => parameters.Add(p => p.DefaultValue, "c"));
+        Assert.Equal(["true", "false", "false"], Selected(cut));
+
+        cut.FindAll("[role=tab]")[1].Click();
+        Assert.Equal(["false", "true", "false"], Selected(cut));
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        var cut = Render(@<BaseTabsRoot DefaultValue="a">@Parts(disableB: true)</BaseTabsRoot>);
+        cut.FindAll("[role=tab]")[1].Click();
+        Assert.Equal(["true", "false", "false"], Selected(cut));
+
+        var root = Render(@<BaseTabsRoot DefaultValue="a" Disabled>@Parts()</BaseTabsRoot>);
+        root.FindAll("[role=tab]")[2].Click();
+        root.FindAll("[role=tab]")[0].KeyDown(Keys.ArrowRight);
+        Assert.Equal(["true", "false", "false"], Selected(root));
+    }
+}

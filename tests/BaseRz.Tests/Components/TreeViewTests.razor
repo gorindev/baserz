@@ -1,0 +1,204 @@
+@using AngleSharp.Dom
+@inherits BaseRzTestContext
+
+@code {
+    private static RenderFragment Nodes(bool disableGuide = false) =>
+        @<text>
+            <BaseTreeViewItem Value="docs" class="item">
+                <BaseTreeViewTrigger class="trigger">Docs</BaseTreeViewTrigger>
+                <BaseTreeViewContent class="group">
+                    <BaseTreeViewItem Value="readme" class="item"><BaseTreeViewTrigger class="trigger">README</BaseTreeViewTrigger></BaseTreeViewItem>
+                    <BaseTreeViewItem Value="guide" Disabled="disableGuide" class="item"><BaseTreeViewTrigger class="trigger">Guide</BaseTreeViewTrigger></BaseTreeViewItem>
+                    <BaseTreeViewItem Value="api" class="item"><BaseTreeViewTrigger class="trigger">API</BaseTreeViewTrigger></BaseTreeViewItem>
+                </BaseTreeViewContent>
+            </BaseTreeViewItem>
+            <BaseTreeViewItem Value="src" class="item"><BaseTreeViewTrigger class="trigger">src</BaseTreeViewTrigger></BaseTreeViewItem>
+        </text>;
+
+    private static IElement Node<T>(IRenderedComponent<T> cut, string label) where T : IComponent =>
+        cut.FindAll("[role=treeitem]").First(item => item.FirstElementChild?.TextContent == label);
+
+    private int _focusCalls;
+
+    // Tree items re-render on mount, so bUnit no longer prints their element reference ids;
+    // assert the roving tab stop moved and a new focus call was issued instead.
+    private void AssertFocused<T>(IRenderedComponent<T> cut, string label) where T : IComponent
+    {
+        var calls = FocusAssert.FocusCount(JSInterop);
+        Assert.True(calls > _focusCalls, $"Expected a focus call for '{label}'.");
+        _focusCalls = calls;
+        Assert.Equal([label], cut.FindAll("[role=treeitem][tabindex='0']").Select(item => item.FirstElementChild!.TextContent));
+    }
+
+    private static bool Has<T>(IRenderedComponent<T> cut, string label) where T : IComponent =>
+        cut.FindAll("[role=treeitem]").Any(item => item.FirstElementChild?.TextContent == label);
+
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(@<BaseTreeViewRoot DefaultExpandedValues="@(new[] { "docs" })" aria-label="Files" class="tree">@Nodes()</BaseTreeViewRoot>);
+
+        var tree = cut.Find("ul[role=tree].tree");
+        Assert.Equal("Files", tree.GetAttribute("aria-label"));
+        Assert.Equal(5, tree.QuerySelectorAll("li[role=treeitem].item").Length);
+        Assert.NotNull(Node(cut, "Docs").QuerySelector("ul[role=group].group"));
+        Assert.Equal("DIV", Node(cut, "Docs").FirstElementChild!.TagName);
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(@<BaseTreeViewRoot DefaultExpandedValues="@(new[] { "docs" })" class="tree">@Nodes()</BaseTreeViewRoot>);
+
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "tree", "item", "trigger", "group");
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var cut = Render(@<BaseTreeViewRoot DefaultExpandedValues="@(new[] { "docs" })" DefaultValue="src">@Nodes(disableGuide: true)</BaseTreeViewRoot>);
+
+        Assert.Equal("open", Node(cut, "Docs").GetAttribute("data-state"));
+        Assert.False(Node(cut, "src").HasAttribute("data-state"));
+        Assert.True(Node(cut, "src").HasAttribute("data-selected"));
+        Assert.True(Node(cut, "Guide").HasAttribute("data-disabled"));
+        Assert.Equal("true", Node(cut, "Guide").GetAttribute("aria-disabled"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(
+            @<BaseTreeViewRoot DefaultExpandedValues="@(new[] { "a" })" id="tree" data-test="probe" aria-label="Probe">
+                <BaseTreeViewItem Value="a" id="item" data-test="probe" aria-label="Probe">
+                    <BaseTreeViewTrigger id="trigger" data-test="probe" aria-label="Probe">A</BaseTreeViewTrigger>
+                    <BaseTreeViewContent id="group" data-test="probe" aria-label="Probe">
+                        <BaseTreeViewItem Value="b"><BaseTreeViewTrigger>B</BaseTreeViewTrigger></BaseTreeViewItem>
+                    </BaseTreeViewContent>
+                </BaseTreeViewItem>
+            </BaseTreeViewRoot>);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("#tree"), "tree");
+        HeadlessAssert.AssertPassThrough(cut.Find("#item"), "item");
+        HeadlessAssert.AssertPassThrough(cut.Find("#trigger"), "trigger");
+        HeadlessAssert.AssertPassThrough(cut.Find("#group"), "group");
+        Assert.Equal("trigger", cut.Find("#item").GetAttribute("aria-labelledby"));
+    }
+
+    [Fact]
+    public void TreeView_ArrowKeys_ExpandCollapse_AriaExpandedSelected()
+    {
+        var cut = Render(@<BaseTreeViewRoot aria-label="Files">@Nodes(disableGuide: true)</BaseTreeViewRoot>);
+
+        Assert.Equal("false", Node(cut, "Docs").GetAttribute("aria-expanded"));
+        Assert.False(Node(cut, "src").HasAttribute("aria-expanded"));
+        Assert.Equal("1", Node(cut, "Docs").GetAttribute("aria-level"));
+        Assert.Equal("0", Node(cut, "Docs").GetAttribute("tabindex"));
+        Assert.Equal("-1", Node(cut, "src").GetAttribute("tabindex"));
+        Assert.False(Has(cut, "README"));
+
+        Node(cut, "Docs").KeyDown(Keys.ArrowRight);
+        Assert.Equal("true", Node(cut, "Docs").GetAttribute("aria-expanded"));
+        Assert.Equal("2", Node(cut, "README").GetAttribute("aria-level"));
+        Assert.Equal(0, FocusAssert.FocusCount(JSInterop));
+
+        Node(cut, "Docs").KeyDown(Keys.ArrowRight);
+        AssertFocused(cut, "README");
+        Assert.Equal("0", Node(cut, "README").GetAttribute("tabindex"));
+        Assert.Equal("-1", Node(cut, "Docs").GetAttribute("tabindex"));
+
+        Node(cut, "README").KeyDown(Keys.ArrowDown);
+        AssertFocused(cut, "API");
+
+        Node(cut, "API").KeyDown(Keys.ArrowDown);
+        AssertFocused(cut, "src");
+
+        Node(cut, "src").KeyDown(Keys.ArrowUp);
+        AssertFocused(cut, "API");
+
+        Node(cut, "API").KeyDown(Keys.ArrowLeft);
+        AssertFocused(cut, "Docs");
+        Assert.Equal("true", Node(cut, "Docs").GetAttribute("aria-expanded"));
+
+        Node(cut, "Docs").KeyDown(Keys.ArrowLeft);
+        Assert.Equal("false", Node(cut, "Docs").GetAttribute("aria-expanded"));
+        Assert.False(Has(cut, "README"));
+
+        Node(cut, "Docs").KeyDown(Keys.End);
+        AssertFocused(cut, "src");
+        Node(cut, "src").KeyDown(Keys.Home);
+        AssertFocused(cut, "Docs");
+
+        Assert.Equal("false", Node(cut, "src").GetAttribute("aria-selected"));
+        Node(cut, "src").KeyDown(Keys.Enter);
+        Assert.Equal("true", Node(cut, "src").GetAttribute("aria-selected"));
+        Assert.Equal("0", Node(cut, "src").GetAttribute("tabindex"));
+        Node(cut, "Docs").KeyDown(Keys.Space);
+        Assert.Equal("true", Node(cut, "Docs").GetAttribute("aria-selected"));
+        Assert.Equal("false", Node(cut, "src").GetAttribute("aria-selected"));
+    }
+
+    [Fact]
+    public void TreeView_TriggerClick_SelectsAndTogglesExpansion()
+    {
+        var cut = Render(@<BaseTreeViewRoot>@Nodes()</BaseTreeViewRoot>);
+
+        Node(cut, "Docs").FirstElementChild!.Click();
+        Assert.Equal("true", Node(cut, "Docs").GetAttribute("aria-selected"));
+        Assert.Equal("true", Node(cut, "Docs").GetAttribute("aria-expanded"));
+
+        Node(cut, "Docs").FirstElementChild!.Click();
+        Assert.Equal("false", Node(cut, "Docs").GetAttribute("aria-expanded"));
+    }
+
+    [Fact]
+    public void Controlled_Bind()
+    {
+        string? selected = null;
+        IReadOnlyCollection<string> expanded = [];
+        var cut = Render<BaseTreeViewRoot>(parameters => parameters
+            .Add(p => p.Value, selected)
+            .Add(p => p.ValueChanged, value => selected = value)
+            .Add(p => p.ExpandedValues, expanded)
+            .Add(p => p.ExpandedValuesChanged, value => expanded = value)
+            .Add(p => p.ChildContent, Nodes()));
+
+        Node(cut, "Docs").KeyDown(Keys.ArrowRight);
+        Node(cut, "src").KeyDown(Keys.Enter);
+        Assert.Equal(["docs"], expanded);
+        Assert.Equal("src", selected);
+        Assert.Equal("false", Node(cut, "Docs").GetAttribute("aria-expanded"));
+        Assert.Equal("false", Node(cut, "src").GetAttribute("aria-selected"));
+
+        cut.Render(parameters => parameters.Add(p => p.Value, selected).Add(p => p.ExpandedValues, expanded));
+        Assert.Equal("true", Node(cut, "Docs").GetAttribute("aria-expanded"));
+        Assert.Equal("true", Node(cut, "src").GetAttribute("aria-selected"));
+    }
+
+    [Fact]
+    public void Uncontrolled_Default()
+    {
+        var cut = Render<BaseTreeViewRoot>(parameters => parameters
+            .Add(p => p.DefaultValue, "src")
+            .Add(p => p.DefaultExpandedValues, new[] { "docs" })
+            .Add(p => p.ChildContent, Nodes()));
+
+        cut.Render(parameters => parameters.Add(p => p.DefaultValue, "docs").Add(p => p.DefaultExpandedValues, Array.Empty<string>()));
+        Assert.Equal("true", Node(cut, "src").GetAttribute("aria-selected"));
+        Assert.Equal("true", Node(cut, "Docs").GetAttribute("aria-expanded"));
+        Assert.Equal("0", Node(cut, "src").GetAttribute("tabindex"));
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        var cut = Render(@<BaseTreeViewRoot DefaultExpandedValues="@(new[] { "docs" })">@Nodes(disableGuide: true)</BaseTreeViewRoot>);
+
+        Node(cut, "Guide").KeyDown(Keys.Enter);
+        Node(cut, "Guide").FirstElementChild!.Click();
+        Assert.Equal("false", Node(cut, "Guide").GetAttribute("aria-selected"));
+
+        Node(cut, "README").KeyDown(Keys.ArrowDown);
+        AssertFocused(cut, "API");
+    }
+}

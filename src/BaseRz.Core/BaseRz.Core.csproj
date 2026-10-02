@@ -19,4 +19,8 @@
     <ProjectReference Include="..\BaseRz.JS\BaseRz.JS.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="BaseRz.Tests" />
+  </ItemGroup>
+
 </Project>

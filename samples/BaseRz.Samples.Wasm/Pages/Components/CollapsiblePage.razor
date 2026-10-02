@@ -1,0 +1,31 @@
+@page "/components/collapsible"
+
+<PageTitle>Collapsible - BaseRz</PageTitle>
+
+<h1>Collapsible</h1>
+<p>
+    <code>BaseCollapsibleRoot</code> wires a trigger to its content with <code>aria-expanded</code> /
+    <code>aria-controls</code>. Closed content stays in the DOM with <code>hidden</code> and <code>inert</code>.
+</p>
+
+<BaseCollapsibleRoot @bind-Open="_open" class="demo-collapsible mb-3">
+    <BaseCollapsibleTrigger class="btn btn-outline-dark">Release notes</BaseCollapsibleTrigger>
+    <BaseCollapsibleContent class="demo-panel">
+        P2 adds disclosure widgets, roving focus, and APG keyboard support.
+    </BaseCollapsibleContent>
+</BaseCollapsibleRoot>
+<p>Controlled: <code>@(_open ? "open" : "closed")</code></p>
+
+<BaseCollapsibleRoot DefaultOpen class="demo-collapsible mb-3">
+    <BaseCollapsibleTrigger class="btn btn-outline-dark">Uncontrolled, DefaultOpen</BaseCollapsibleTrigger>
+    <BaseCollapsibleContent class="demo-panel">Starts open.</BaseCollapsibleContent>
+</BaseCollapsibleRoot>
+
+<BaseCollapsibleRoot Disabled class="demo-collapsible">
+    <BaseCollapsibleTrigger class="btn btn-outline-dark">Disabled</BaseCollapsibleTrigger>
+    <BaseCollapsibleContent class="demo-panel">Never shown.</BaseCollapsibleContent>
+</BaseCollapsibleRoot>
+
+@code {
+    private bool _open;
+}

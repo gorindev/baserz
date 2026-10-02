@@ -186,37 +186,37 @@ Internal `RovingFocusGroup` (tabindex, arrow keys by orientation, Home/End, opti
 | **BaseCheckboxGroup** (Root, Label, Description, ErrorMessage) | **Port from:** `ShadRz/Base/Checkbox.cs` `CheckboxGroup` | `role="group"`; collection value; wire description/error ids (Form in P3 will share the same pattern). |
 | **BaseSwitch** (Root, Thumb) | **New** | `role="switch"`, `aria-checked`; Space/Enter. |
 
-- [ ] Internal `RovingFocusGroup`
-- [ ] BaseCollapsible
-- [ ] BaseAccordion
-- [ ] BaseTabs
-- [ ] BaseToggleGroup
-- [ ] BaseTreeView
-- [ ] BaseRadioGroup
-- [ ] BaseCheckbox
-- [ ] BaseCheckboxGroup
-- [ ] BaseSwitch
+- [x] Internal `RovingFocusGroup`
+- [x] BaseCollapsible
+- [x] BaseAccordion
+- [x] BaseTabs
+- [x] BaseToggleGroup
+- [x] BaseTreeView
+- [x] BaseRadioGroup
+- [x] BaseCheckbox
+- [x] BaseCheckboxGroup
+- [x] BaseSwitch
 
 ### Tests (write first)
 
 Default red suite for each P2 component, plus:
 
-- [ ] `RovingFocusGroup_TabIndexOnlyActiveIsZero`; Arrow/Home/End by orientation; skips disabled; RTL/vertical.
-- [ ] `Collapsible_AriaExpandedControls_InertWhenClosed_DefaultOpen`.
-- [ ] `Accordion_Single_ClosesOthers`; `Multiple_AllowsMany`; `Collapsible_CanCloseLast`; arrow focus does not toggle; `aria-disabled` on disabled trigger.
-- [ ] `Tabs_TablistTabTabpanel_Ids`; automatic activation on arrows; `aria-selected`/`tabindex`.
-- [ ] `ToggleGroup_Single_UnpressesSiblings`; `Multiple_Independent`.
-- [ ] `TreeView_ArrowKeys_ExpandCollapse_AriaExpandedSelected`.
-- [ ] `RadioGroup_RoleRadiogroup_NoNativeInput`; roving + `aria-checked`; optional hidden input when `Name` set.
-- [ ] `Checkbox_Indeterminate_AriaCheckedMixed`; Space cycles or sets per spec chosen in implementation (document in test name).
-- [ ] `CheckboxGroup_CollectionValue_DescribedByError`.
-- [ ] `Switch_RoleSwitch_AriaChecked`.
+- [x] `RovingFocusGroup_TabIndexOnlyActiveIsZero`; Arrow/Home/End by orientation; skips disabled; RTL/vertical.
+- [x] `Collapsible_AriaExpandedControls_InertWhenClosed_DefaultOpen`.
+- [x] `Accordion_Single_ClosesOthers`; `Multiple_AllowsMany`; `Collapsible_CanCloseLast`; arrow focus does not toggle; `aria-disabled` on disabled trigger.
+- [x] `Tabs_TablistTabTabpanel_Ids`; automatic activation on arrows; `aria-selected`/`tabindex`.
+- [x] `ToggleGroup_Single_UnpressesSiblings`; `Multiple_Independent`.
+- [x] `TreeView_ArrowKeys_ExpandCollapse_AriaExpandedSelected`.
+- [x] `RadioGroup_RoleRadiogroup_NoNativeInput`; roving + `aria-checked`; optional hidden input when `Name` set.
+- [x] `Checkbox_Indeterminate_AriaCheckedMixed`; Space cycles or sets per spec chosen in implementation (document in test name).
+- [x] `CheckboxGroup_CollectionValue_DescribedByError`.
+- [x] `Switch_RoleSwitch_AriaChecked`.
 
 ### Checks
 
-- [ ] `dotnet test` green; keyboard tests exist for Collapsible, Accordion, Tabs, RadioGroup, TreeView, ToggleGroup.
-- [ ] No native `<input type="checkbox|radio">` as the **visible** control (hidden form input allowed).
-- [ ] Sample pages for all P2 components; README Quick Start can wait until P8 but Collapsible API is the one README will document.
+- [x] `dotnet test` green; keyboard tests exist for Collapsible, Accordion, Tabs, RadioGroup, TreeView, ToggleGroup.
+- [x] No native `<input type="checkbox|radio">` as the **visible** control (hidden form input allowed).
+- [x] Sample pages for all P2 components; README Quick Start can wait until P8 but Collapsible API is the one README will document.
 
 ---
 

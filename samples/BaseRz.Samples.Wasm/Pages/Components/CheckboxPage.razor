@@ -1,0 +1,37 @@
+@page "/components/checkbox"
+
+<PageTitle>Checkbox - BaseRz</PageTitle>
+
+<h1>Checkbox</h1>
+<p>
+    <code>BaseCheckboxRoot</code> is a <code>role="checkbox"</code> button with <code>aria-checked</code> of
+    <code>true</code>, <code>false</code>, or <code>mixed</code>. Activating a mixed checkbox checks it.
+</p>
+
+<label class="demo-check-option mb-2">
+    <BaseCheckboxRoot @bind-Checked="_terms" class="demo-checkbox"><BaseCheckboxIndicator>✓</BaseCheckboxIndicator></BaseCheckboxRoot>
+    Accept terms (controlled: <code>@_terms</code>)
+</label>
+
+<label class="demo-check-option mb-2">
+    <BaseCheckboxRoot @bind-Checked="_all" @bind-Indeterminate="_some" class="demo-checkbox">
+        <BaseCheckboxIndicator>@(_some ? "–" : "✓")</BaseCheckboxIndicator>
+    </BaseCheckboxRoot>
+    Select all (<code>@(_some ? "mixed" : _all.ToString())</code>)
+</label>
+
+<label class="demo-check-option mb-2">
+    <BaseCheckboxRoot DefaultChecked Name="newsletter" class="demo-checkbox"><BaseCheckboxIndicator>✓</BaseCheckboxIndicator></BaseCheckboxRoot>
+    Uncontrolled with <code>Name</code> (hidden input when checked)
+</label>
+
+<label class="demo-check-option">
+    <BaseCheckboxRoot Disabled class="demo-checkbox"><BaseCheckboxIndicator>✓</BaseCheckboxIndicator></BaseCheckboxRoot>
+    Disabled
+</label>
+
+@code {
+    private bool _terms;
+    private bool _all;
+    private bool _some = true;
+}

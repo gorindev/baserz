@@ -1,0 +1,131 @@
+@inherits BaseRzTestContext
+
+@code {
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(@<BaseSwitchRoot class="switch" aria-label="Wi-Fi"><BaseSwitchThumb class="thumb" /></BaseSwitchRoot>);
+
+        var root = cut.Find("button[role=switch].switch");
+        Assert.Equal("button", root.GetAttribute("type"));
+        Assert.NotNull(root.QuerySelector("span.thumb"));
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(@<BaseSwitchRoot class="switch"><BaseSwitchThumb class="thumb" /></BaseSwitchRoot>);
+
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "switch", "thumb");
+        Assert.Empty(Render(@<BaseSwitchRoot><BaseSwitchThumb /></BaseSwitchRoot>).FindAll("[class]"));
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var off = Render(@<BaseSwitchRoot><BaseSwitchThumb /></BaseSwitchRoot>);
+        Assert.Equal("unchecked", off.Find("button").GetAttribute("data-state"));
+        Assert.Equal("unchecked", off.Find("span").GetAttribute("data-state"));
+
+        var on = Render(@<BaseSwitchRoot DefaultChecked Disabled><BaseSwitchThumb /></BaseSwitchRoot>);
+        Assert.Equal("checked", on.Find("button").GetAttribute("data-state"));
+        Assert.Equal("checked", on.Find("span").GetAttribute("data-state"));
+        Assert.True(on.Find("button").HasAttribute("data-disabled"));
+        Assert.True(on.Find("span").HasAttribute("data-disabled"));
+        Assert.True(on.Find("button").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(
+            @<BaseSwitchRoot id="switch" data-test="probe" aria-label="Probe">
+                <BaseSwitchThumb id="thumb" data-test="probe" aria-label="Probe" />
+            </BaseSwitchRoot>);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("button"), "switch");
+        HeadlessAssert.AssertPassThrough(cut.Find("span"), "thumb");
+    }
+
+    [Fact]
+    public void Switch_RoleSwitch_AriaChecked()
+    {
+        var cut = Render(@<BaseSwitchRoot aria-label="Wi-Fi" Required />);
+
+        Assert.Empty(cut.FindAll("input"));
+        Assert.Equal("switch", cut.Find("button").GetAttribute("role"));
+        Assert.Equal("false", cut.Find("button").GetAttribute("aria-checked"));
+        Assert.Equal("true", cut.Find("button").GetAttribute("aria-required"));
+
+        cut.Find("button").Click();
+        Assert.Equal("true", cut.Find("button").GetAttribute("aria-checked"));
+    }
+
+    [Fact]
+    public void Switch_NonButtonElement_TogglesOnEnterAndSpace()
+    {
+        var cut = Render(@<BaseSwitchRoot As="span" aria-label="Wi-Fi" />);
+
+        Assert.Equal("0", cut.Find("span").GetAttribute("tabindex"));
+        cut.Find("span").KeyDown(Keys.Enter);
+        Assert.Equal("true", cut.Find("span").GetAttribute("aria-checked"));
+        cut.Find("span").KeyDown(Keys.Space);
+        Assert.Equal("false", cut.Find("span").GetAttribute("aria-checked"));
+    }
+
+    [Fact]
+    public void Switch_HiddenInput_WhenNameSetAndChecked()
+    {
+        var cut = Render(@<BaseSwitchRoot Name="wifi" Value="enabled" DefaultChecked />);
+
+        var input = cut.Find("input");
+        Assert.Equal("hidden", input.GetAttribute("type"));
+        Assert.Equal("wifi", input.GetAttribute("name"));
+        Assert.Equal("enabled", input.GetAttribute("value"));
+
+        cut.Find("button").Click();
+        Assert.Empty(cut.FindAll("input"));
+    }
+
+    [Fact]
+    public void Controlled_Bind()
+    {
+        var parent = false;
+        var emitted = new List<bool>();
+        var cut = Render<BaseSwitchRoot>(parameters => parameters
+            .Add(p => p.Checked, parent)
+            .Add(p => p.CheckedChanged, value => { emitted.Add(value); parent = value; }));
+
+        cut.Find("button").Click();
+        Assert.Equal([true], emitted);
+        Assert.Equal("false", cut.Find("button").GetAttribute("aria-checked"));
+
+        cut.Render(parameters => parameters.Add(p => p.Checked, parent));
+        Assert.Equal("true", cut.Find("button").GetAttribute("aria-checked"));
+    }
+
+    [Fact]
+    public void Uncontrolled_Default()
+    {
+        var cut = Render<BaseSwitchRoot>(parameters => parameters.Add(p => p.DefaultChecked, true));
+
+        cut.Render(parameters => parameters.Add(p => p.DefaultChecked, false));
+        Assert.Equal("true", cut.Find("button").GetAttribute("aria-checked"));
+
+        cut.Find("button").Click();
+        Assert.Equal("false", cut.Find("button").GetAttribute("aria-checked"));
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        var cut = Render(@<BaseSwitchRoot Disabled />);
+        cut.Find("button").Click();
+        Assert.Equal("false", cut.Find("button").GetAttribute("aria-checked"));
+
+        var asDiv = Render(@<BaseSwitchRoot As="div" Disabled />);
+        asDiv.Find("div").KeyDown(Keys.Space);
+        Assert.Equal("false", asDiv.Find("div").GetAttribute("aria-checked"));
+        Assert.Equal("true", asDiv.Find("div").GetAttribute("aria-disabled"));
+    }
+}

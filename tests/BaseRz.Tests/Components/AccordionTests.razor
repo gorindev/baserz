@@ -1,0 +1,241 @@
+@inherits BaseRzTestContext
+
+@code {
+    private static RenderFragment Items(bool disableB = false) =>
+        @<text>
+            <BaseAccordionItem Value="a" class="item">
+                <BaseAccordionHeader class="header"><BaseAccordionTrigger class="trigger">A</BaseAccordionTrigger></BaseAccordionHeader>
+                <BaseAccordionContent class="content">Body A</BaseAccordionContent>
+            </BaseAccordionItem>
+            <BaseAccordionItem Value="b" Disabled="disableB" class="item">
+                <BaseAccordionHeader class="header"><BaseAccordionTrigger class="trigger">B</BaseAccordionTrigger></BaseAccordionHeader>
+                <BaseAccordionContent class="content">Body B</BaseAccordionContent>
+            </BaseAccordionItem>
+            <BaseAccordionItem Value="c" class="item">
+                <BaseAccordionHeader class="header"><BaseAccordionTrigger class="trigger">C</BaseAccordionTrigger></BaseAccordionHeader>
+                <BaseAccordionContent class="content">Body C</BaseAccordionContent>
+            </BaseAccordionItem>
+        </text>;
+
+    private static string?[] Expanded<T>(IRenderedComponent<T> cut) where T : IComponent =>
+        cut.FindAll("button").Select(button => button.GetAttribute("aria-expanded")).ToArray();
+
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(@<BaseAccordionRoot class="root">@Items()</BaseAccordionRoot>);
+
+        var root = cut.Find("div.root");
+        Assert.Equal(3, root.QuerySelectorAll("div.item").Length);
+        var header = cut.Find("h3.header");
+        Assert.Equal("BUTTON", header.FirstElementChild!.TagName);
+        Assert.Equal(3, cut.FindAll("[role=region].content").Count);
+    }
+
+    [Fact]
+    public void Header_As_ChangesHeadingLevel()
+    {
+        var cut = Render(
+            @<BaseAccordionRoot>
+                <BaseAccordionItem Value="a">
+                    <BaseAccordionHeader As="h2"><BaseAccordionTrigger>A</BaseAccordionTrigger></BaseAccordionHeader>
+                </BaseAccordionItem>
+            </BaseAccordionRoot>);
+
+        Assert.NotNull(cut.Find("h2 > button"));
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(@<BaseAccordionRoot class="root">@Items()</BaseAccordionRoot>);
+
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "root", "item", "header", "trigger", "content");
+        Assert.Empty(cut.FindAll("svg"));
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var cut = Render(@<BaseAccordionRoot DefaultValue="a">@Items(disableB: true)</BaseAccordionRoot>);
+
+        var items = cut.FindAll("div.item");
+        Assert.Equal("open", items[0].GetAttribute("data-state"));
+        Assert.Equal("closed", items[1].GetAttribute("data-state"));
+        Assert.Equal("open", cut.FindAll("button")[0].GetAttribute("data-state"));
+        Assert.True(items[1].HasAttribute("data-disabled"));
+        Assert.True(cut.FindAll("button")[1].HasAttribute("data-disabled"));
+        Assert.Equal("vertical", cut.Find("div[data-orientation]").GetAttribute("data-orientation"));
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(
+            @<BaseAccordionRoot id="root" data-test="probe" aria-label="Probe">
+                <BaseAccordionItem Value="a" id="item" data-test="probe" aria-label="Probe">
+                    <BaseAccordionHeader id="header" data-test="probe" aria-label="Probe">
+                        <BaseAccordionTrigger id="trigger" data-test="probe" aria-label="Probe">A</BaseAccordionTrigger>
+                    </BaseAccordionHeader>
+                    <BaseAccordionContent id="content" data-test="probe" aria-label="Probe">Body</BaseAccordionContent>
+                </BaseAccordionItem>
+            </BaseAccordionRoot>);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("#root"), "root");
+        HeadlessAssert.AssertPassThrough(cut.Find("#item"), "item");
+        HeadlessAssert.AssertPassThrough(cut.Find("#header"), "header");
+        HeadlessAssert.AssertPassThrough(cut.Find("button"), "trigger");
+        HeadlessAssert.AssertPassThrough(cut.Find("[role=region]"), "content");
+        Assert.Equal("content", cut.Find("button").GetAttribute("aria-controls"));
+        Assert.Equal("trigger", cut.Find("[role=region]").GetAttribute("aria-labelledby"));
+    }
+
+    [Fact]
+    public void Accordion_TriggerControlsRegion_HiddenAndInertWhenClosed()
+    {
+        var cut = Render(@<BaseAccordionRoot>@Items()</BaseAccordionRoot>);
+
+        var trigger = cut.FindAll("button")[0];
+        var region = cut.FindAll("[role=region]")[0];
+        Assert.Equal(region.Id, trigger.GetAttribute("aria-controls"));
+        Assert.Equal(trigger.Id, region.GetAttribute("aria-labelledby"));
+        Assert.True(region.HasAttribute("hidden"));
+        Assert.True(region.HasAttribute("inert"));
+
+        cut.FindAll("button")[0].Click();
+        Assert.False(cut.FindAll("[role=region]")[0].HasAttribute("hidden"));
+    }
+
+    [Fact]
+    public void Accordion_Single_ClosesOthers()
+    {
+        var cut = Render(@<BaseAccordionRoot>@Items()</BaseAccordionRoot>);
+
+        cut.FindAll("button")[0].Click();
+        Assert.Equal(["true", "false", "false"], Expanded(cut));
+
+        cut.FindAll("button")[2].Click();
+        Assert.Equal(["false", "false", "true"], Expanded(cut));
+    }
+
+    [Fact]
+    public void Accordion_Multiple_AllowsMany()
+    {
+        var cut = Render(@<BaseAccordionRoot Type="SelectionMode.Multiple">@Items()</BaseAccordionRoot>);
+
+        cut.FindAll("button")[0].Click();
+        cut.FindAll("button")[2].Click();
+        Assert.Equal(["true", "false", "true"], Expanded(cut));
+
+        cut.FindAll("button")[0].Click();
+        Assert.Equal(["false", "false", "true"], Expanded(cut));
+    }
+
+    [Fact]
+    public void Accordion_Collapsible_CanCloseLast()
+    {
+        var collapsible = Render(@<BaseAccordionRoot DefaultValue="a">@Items()</BaseAccordionRoot>);
+        collapsible.FindAll("button")[0].Click();
+        Assert.Equal(["false", "false", "false"], Expanded(collapsible));
+
+        var fixedOpen = Render(@<BaseAccordionRoot DefaultValue="a" Collapsible="false">@Items()</BaseAccordionRoot>);
+        fixedOpen.FindAll("button")[0].Click();
+        Assert.Equal(["true", "false", "false"], Expanded(fixedOpen));
+        Assert.Equal("true", fixedOpen.FindAll("button")[0].GetAttribute("aria-disabled"));
+        Assert.False(fixedOpen.FindAll("button")[0].HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void Accordion_ArrowFocus_DoesNotToggle()
+    {
+        var cut = Render(@<BaseAccordionRoot>@Items(disableB: true)</BaseAccordionRoot>);
+        var focus = new FocusTracker(JSInterop).Observe(cut.FindAll("button"), button => button.TextContent);
+
+        cut.FindAll("button")[0].KeyDown(Keys.ArrowDown);
+        Assert.Equal("C", focus.LastFocused);
+        Assert.Equal(["false", "false", "false"], Expanded(cut));
+
+        cut.FindAll("button")[2].KeyDown(Keys.ArrowDown);
+        Assert.Equal("A", focus.LastFocused);
+
+        cut.FindAll("button")[0].KeyDown(Keys.ArrowUp);
+        Assert.Equal("C", focus.LastFocused);
+
+        cut.FindAll("button")[2].KeyDown(Keys.Home);
+        Assert.Equal("A", focus.LastFocused);
+
+        cut.FindAll("button")[0].KeyDown(Keys.End);
+        Assert.Equal("C", focus.LastFocused);
+        Assert.Equal(["false", "false", "false"], Expanded(cut));
+    }
+
+    [Fact]
+    public void Accordion_AriaDisabled_OnDisabledTrigger()
+    {
+        var cut = Render(@<BaseAccordionRoot>@Items(disableB: true)</BaseAccordionRoot>);
+
+        var disabled = cut.FindAll("button")[1];
+        Assert.Equal("true", disabled.GetAttribute("aria-disabled"));
+        Assert.True(disabled.HasAttribute("disabled"));
+        Assert.False(cut.FindAll("button")[0].HasAttribute("aria-disabled"));
+    }
+
+    [Fact]
+    public void Controlled_Bind()
+    {
+        string? parent = null;
+        var emitted = new List<string?>();
+        var cut = Render<BaseAccordionRoot>(parameters => parameters
+            .Add(p => p.Value, parent)
+            .Add(p => p.ValueChanged, value => { emitted.Add(value); parent = value; })
+            .Add(p => p.ChildContent, Items()));
+
+        cut.FindAll("button")[1].Click();
+        Assert.Equal(["b"], emitted);
+        Assert.Equal(["false", "false", "false"], Expanded(cut));
+
+        cut.Render(parameters => parameters.Add(p => p.Value, parent));
+        Assert.Equal(["false", "true", "false"], Expanded(cut));
+
+        IReadOnlyCollection<string> values = ["a"];
+        var multiple = Render<BaseAccordionRoot>(parameters => parameters
+            .Add(p => p.Type, SelectionMode.Multiple)
+            .Add(p => p.Values, values)
+            .Add(p => p.ValuesChanged, next => values = next)
+            .Add(p => p.ChildContent, Items()));
+        multiple.FindAll("button")[2].Click();
+        Assert.Equal(["a", "c"], values);
+        multiple.Render(parameters => parameters.Add(p => p.Values, values));
+        Assert.Equal(["true", "false", "true"], Expanded(multiple));
+    }
+
+    [Fact]
+    public void Uncontrolled_Default()
+    {
+        var cut = Render<BaseAccordionRoot>(parameters => parameters
+            .Add(p => p.DefaultValue, "a")
+            .Add(p => p.ChildContent, Items()));
+
+        cut.Render(parameters => parameters.Add(p => p.DefaultValue, "c"));
+        Assert.Equal(["true", "false", "false"], Expanded(cut));
+
+        var multiple = Render<BaseAccordionRoot>(parameters => parameters
+            .Add(p => p.Type, SelectionMode.Multiple)
+            .Add(p => p.DefaultValues, new[] { "a", "c" })
+            .Add(p => p.ChildContent, Items()));
+        Assert.Equal(["true", "false", "true"], Expanded(multiple));
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        var item = Render(@<BaseAccordionRoot>@Items(disableB: true)</BaseAccordionRoot>);
+        item.FindAll("button")[1].Click();
+        Assert.Equal(["false", "false", "false"], Expanded(item));
+
+        var root = Render(@<BaseAccordionRoot Disabled>@Items()</BaseAccordionRoot>);
+        root.FindAll("button")[0].Click();
+        Assert.Equal(["false", "false", "false"], Expanded(root));
+        Assert.All(root.FindAll("button"), button => Assert.Equal("true", button.GetAttribute("aria-disabled")));
+    }
+}

@@ -5,16 +5,27 @@
 <h1>Components</h1>
 
 <p>
-    P1 static and simple primitives. Each page passes Bootstrap classes through <code>class</code> purely as demo
-    chrome; the components themselves emit only ARIA, <code>data-*</code> state, and the caller's class.
+    Each page passes Bootstrap classes through <code>class</code> purely as demo chrome; the components themselves
+    emit only ARIA, <code>data-*</code> state, and the caller's class.
 </p>
 
-<ul class="list-group">
-    @foreach (var entry in SampleCatalog.P1)
-    {
-        <li class="list-group-item">
-            <a href="@entry.Route" class="fw-semibold">@entry.Name</a>
-            <div class="small text-muted">@entry.Summary</div>
-        </li>
-    }
-</ul>
+<h2 class="h4 mt-4">P1 primitives</h2>
+<p>Static and simple primitives.</p>
+@Catalog(SampleCatalog.P1)
+
+<h2 class="h4 mt-4">P2 disclosure</h2>
+<p>Disclosure widgets and composite controls with roving focus and APG keyboard support.</p>
+@Catalog(SampleCatalog.P2)
+
+@code {
+    private static RenderFragment Catalog(IReadOnlyList<SampleEntry> entries) =>
+        @<ul class="list-group">
+            @foreach (var entry in entries)
+            {
+                <li class="list-group-item">
+                    <a href="@entry.Route" class="fw-semibold">@entry.Name</a>
+                    <div class="small text-muted">@entry.Summary</div>
+                </li>
+            }
+        </ul>;
+}
