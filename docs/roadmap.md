@@ -76,36 +76,36 @@ No public components. Unblocks every later phase.
 
 Current tree is Razor class-library templates (`Component1.razor`, `ExampleJsInterop`). Replace them.
 
-- [ ] Remove template Razor/JS samples from `BaseRz.Core` and `BaseRz.JS`.
-- [ ] Port `Css` as public `BaseRz.Core.Utilities.Css` — `Join`, `CallerClass`, `AttributesWithoutClass`. **Port from:** `ShadRz/Base/Css.cs`.
-- [ ] Add `ControllableState<T>` (controlled vs `Default*` uncontrolled, `*Changed` callbacks).
-- [ ] Add id generator and helpers that apply `data-state` / `data-disabled` / `data-orientation` / `data-side` / `data-align`.
-- [ ] Add a shared component base: `AdditionalAttributes`, `ChildContent`, `As`.
-- [ ] Add shared enums: `Orientation`, `Side`, `Align`, `Direction` (placement later extends `Side` + `Align`).
-- [ ] Add `IServiceCollection.AddBaseRz()` (overlay/toast services registered here; hosts must still render hosts from P4).
-- [ ] Add opt-in `wwwroot/css/baserz-reset.css` and document the README `<link>`.
-- [ ] Add bUnit test helpers (render with cascading values, keyboard dispatch).
-- [ ] Replace the WASM sample shell (nav + placeholder pages). Keep Bootstrap in the sample only as demo chrome, not as a BaseRz dependency.
+- [x] Remove template Razor/JS samples from `BaseRz.Core` and `BaseRz.JS`.
+- [x] Port `Css` as public `BaseRz.Core.Utilities.Css` — `Join`, `CallerClass`, `AttributesWithoutClass`. **Port from:** `ShadRz/Base/Css.cs`.
+- [x] Add `ControllableState<T>` (controlled vs `Default*` uncontrolled, `*Changed` callbacks).
+- [x] Add id generator and helpers that apply `data-state` / `data-disabled` / `data-orientation` / `data-side` / `data-align`.
+- [x] Add a shared component base: `AdditionalAttributes`, `ChildContent`, `As`.
+- [x] Add shared enums: `Orientation`, `Side`, `Align`, `Direction` (placement later extends `Side` + `Align`).
+- [x] Add `IServiceCollection.AddBaseRz()` (overlay/toast services registered here; hosts must still render hosts from P4).
+- [x] Add opt-in `wwwroot/css/baserz-reset.css` and document the README `<link>`.
+- [x] Add bUnit test helpers (render with cascading values, keyboard dispatch).
+- [x] Replace the WASM sample shell (nav + placeholder pages). Keep Bootstrap in the sample only as demo chrome, not as a BaseRz dependency.
 
 ### Tests (write first)
 
-- [ ] `CssTests.Join_SkipsNullAndWhitespace`
-- [ ] `CssTests.CallerClass_ReadsClass_RemovesNothingFromSource`
-- [ ] `CssTests.AttributesWithoutClass_ReturnsCopyWithoutClass`
-- [ ] `ControllableStateTests.Uncontrolled_UsesDefault_ThenIgnoresDefaultChanges`
-- [ ] `ControllableStateTests.Controlled_EmitsChanged_AndDoesNotMutateStaleParent`
-- [ ] `IdGeneratorTests.IsStablePerInstance_AndUniqueAcrossInstances`
-- [ ] `DataAttributeTests.MapsOpenClosed_Disabled_Orientation_Side_Align`
-- [ ] `ServiceCollectionTests.AddBaseRz_RegistersRequiredServices`
-- [ ] `ResetCssTests.BaserzReset_IsPackagedAsStaticWebAsset`
-- [ ] Delete `UnitTest1`; helpers compile and are used by at least one test.
+- [x] `CssTests.Join_SkipsNullAndWhitespace`
+- [x] `CssTests.CallerClass_ReadsClass_RemovesNothingFromSource`
+- [x] `CssTests.AttributesWithoutClass_ReturnsCopyWithoutClass`
+- [x] `ControllableStateTests.Uncontrolled_UsesDefault_ThenIgnoresDefaultChanges`
+- [x] `ControllableStateTests.Controlled_EmitsChanged_AndDoesNotMutateStaleParent`
+- [x] `IdGeneratorTests.IsStablePerInstance_AndUniqueAcrossInstances`
+- [x] `DataAttributeTests.MapsOpenClosed_Disabled_Orientation_Side_Align`
+- [x] `ServiceCollectionTests.AddBaseRz_RegistersRequiredServices`
+- [x] `ResetCssTests.BaserzReset_IsPackagedAsStaticWebAsset`
+- [x] Delete `UnitTest1`; helpers compile and are used by at least one test.
 
 ### Checks
 
-- [ ] `dotnet test tests/BaseRz.Tests` green; `dotnet build BaseRz.slnx` green.
-- [ ] No `Component1.razor` / `ExampleJsInterop` left in Core or JS.
-- [ ] `baserz-reset.css` reachable as `_content/BaseRz.Core/css/baserz-reset.css`.
-- [ ] Public API of `Css` matches `Join` / `CallerClass` / `AttributesWithoutClass`.
+- [x] `dotnet test tests/BaseRz.Tests` green; `dotnet build BaseRz.slnx` green.
+- [x] No `Component1.razor` / `ExampleJsInterop` left in Core or JS.
+- [x] `baserz-reset.css` reachable as `_content/BaseRz.Core/css/baserz-reset.css`.
+- [x] Public API of `Css` matches `Join` / `CallerClass` / `AttributesWithoutClass`.
 
 ---
 

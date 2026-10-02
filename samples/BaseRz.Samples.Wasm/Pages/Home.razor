@@ -1,7 +1,21 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>BaseRz</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>BaseRz</h1>
 
-Welcome to your new app.
+<p class="lead">
+    Unstyled, accessible, headless UI primitives for Blazor WebAssembly, Blazor Server, and .NET MAUI Blazor Hybrid.
+</p>
+
+<h2 class="h4 mt-4">The headless contract</h2>
+<ul>
+    <li>Components emit ARIA attributes, <code>data-*</code> state, and your <code>class</code> only. No built-in CSS.</li>
+    <li>Roles and keyboard behavior follow the WAI-ARIA Authoring Practices.</li>
+    <li>Stateful roots support controlled (<code>@@bind-Open</code>) and uncontrolled (<code>DefaultOpen</code>) use.</li>
+    <li>State is exposed as <code>data-state</code>, <code>data-disabled</code>, <code>data-orientation</code>, <code>data-side</code>, and <code>data-align</code> for styling.</li>
+</ul>
+
+<p class="text-muted small">
+    This sample app uses Bootstrap for its own chrome only. BaseRz does not depend on Bootstrap.
+</p>

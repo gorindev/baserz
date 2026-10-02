@@ -1,0 +1,25 @@
+@page "/getting-started"
+
+<PageTitle>Getting Started - BaseRz</PageTitle>
+
+<h1>Getting Started</h1>
+
+<h2 class="h4 mt-4">1. Install</h2>
+<pre><code>dotnet add package BaseRz.Core</code></pre>
+
+<h2 class="h4 mt-4">2. Register services</h2>
+<p>In <code>Program.cs</code> (or <code>MauiProgram.cs</code>):</p>
+<pre><code>builder.Services.AddBaseRz();</code></pre>
+
+<h2 class="h4 mt-4">3. Optional reset</h2>
+<p>For a neutral baseline across browsers and WebViews, add to <code>index.html</code> or <code>App.razor</code>:</p>
+<pre><code>&lt;link href="_content/BaseRz.Core/css/baserz-reset.css" rel="stylesheet" /&gt;</code></pre>
+
+<p>
+    Direction for keyboard navigation defaults to <code>@Options.DefaultDirection</code>.
+    Configure it with <code>AddBaseRz(o =&gt; o.DefaultDirection = Direction.Rtl)</code>.
+</p>
+
+@code {
+    [Inject] private BaseRzOptions Options { get; set; } = default!;
+}

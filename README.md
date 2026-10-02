@@ -24,6 +24,12 @@ Install the core headless library via NuGet:
 dotnet add package BaseRz.Core
 ```
 
+Register the services in `Program.cs` (WASM, Server, or `MauiProgram.cs`):
+
+```csharp
+builder.Services.AddBaseRz();
+```
+
 ---
 
 ## Quick Start
