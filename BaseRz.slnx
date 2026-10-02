@@ -3,4 +3,7 @@
     <Project Path="src/BaseRz.Core/BaseRz.Core.csproj" />
     <Project Path="src/BaseRz.JS/BaseRz.JS.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BaseRz.Tests/BaseRz.Tests.csproj" />
+  </Folder>
 </Solution>
