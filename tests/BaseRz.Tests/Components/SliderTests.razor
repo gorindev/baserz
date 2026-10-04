@@ -1,0 +1,117 @@
+@inherits BaseRzTestContext
+
+@code {
+    private static RenderFragment Slider(Orientation orientation = Orientation.Horizontal) => @<BaseSliderRoot class="root" Min="0" Max="100" Step="10" DefaultValue="20" Orientation="orientation">
+        <BaseSliderTrack class="track">
+            <BaseSliderRange class="range" />
+        </BaseSliderTrack>
+        <BaseSliderThumb class="thumb" aria-label="Volume" />
+    </BaseSliderRoot>;
+
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(Slider());
+        Assert.NotNull(cut.Find(".track"));
+        Assert.NotNull(cut.Find(".range"));
+        Assert.Equal("slider", cut.Find(".thumb").GetAttribute("role"));
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(Slider());
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "root", "track", "range", "thumb");
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(@<BaseSliderRoot id="root" data-test="probe" aria-label="Probe">
+            <BaseSliderThumb id="thumb" data-test="probe" aria-label="Probe" />
+        </BaseSliderRoot>);
+        HeadlessAssert.AssertPassThrough(cut.Find("#root"), "root");
+        HeadlessAssert.AssertPassThrough(cut.Find("#thumb"), "thumb");
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var cut = Render(@<BaseSliderRoot Disabled Orientation="Orientation.Vertical">
+            <BaseSliderThumb aria-label="Volume" />
+        </BaseSliderRoot>);
+        Assert.Equal("vertical", cut.Find("[data-orientation]").GetAttribute("data-orientation"));
+        Assert.True(cut.Find("[role=slider]").HasAttribute("data-disabled"));
+        Assert.Equal("true", cut.Find("[role=slider]").GetAttribute("aria-disabled"));
+    }
+
+    [Fact]
+    public void Controlled_Bind()
+    {
+        var value = 10m;
+        var cut = Render<BaseSliderRoot>(parameters => parameters
+            .Add(p => p.Value, value)
+            .Add(p => p.ValueChanged, (decimal next) => value = next)
+            .Add(p => p.Min, 0m)
+            .Add(p => p.Max, 100m)
+            .Add(p => p.Step, 10m)
+            .AddChildContent(@<BaseSliderThumb aria-label="Volume" />));
+
+        cut.Find("[role=slider]").KeyDown(Keys.ArrowRight);
+        Assert.Equal(20, value);
+        cut.Render(parameters => parameters.Add(p => p.Value, value));
+        Assert.Equal("20", cut.Find("[role=slider]").GetAttribute("aria-valuenow"));
+    }
+
+    [Fact]
+    public void Uncontrolled_Default()
+    {
+        var cut = Render<BaseSliderRoot>(parameters => parameters
+            .Add(p => p.DefaultValue, 20m)
+            .Add(p => p.Min, 0m)
+            .Add(p => p.Max, 100m)
+            .AddChildContent(@<BaseSliderThumb aria-label="Volume" />));
+        cut.Render(parameters => parameters.Add(p => p.DefaultValue, 90m));
+        var thumb = cut.Find("[role=slider]");
+        Assert.Equal("20", thumb.GetAttribute("aria-valuenow"));
+        Assert.Equal("left:20%", thumb.GetAttribute("style"));
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        var value = 10m;
+        var cut = Render<BaseSliderRoot>(parameters => parameters
+            .Add(p => p.Value, value)
+            .Add(p => p.ValueChanged, (decimal next) => value = next)
+            .Add(p => p.Disabled, true)
+            .AddChildContent(@<BaseSliderThumb aria-label="Volume" />));
+
+        cut.Find("[role=slider]").KeyDown(Keys.ArrowRight);
+        Assert.Equal(10, value);
+    }
+
+    [Fact]
+    public void Slider_RoleSlider_KeyboardByOrientation()
+    {
+        var cut = Render(Slider(Orientation.Vertical));
+        var thumb = cut.Find("[role=slider]");
+        Assert.Equal("slider", thumb.GetAttribute("role"));
+        Assert.Equal("vertical", thumb.GetAttribute("aria-orientation"));
+        Assert.Equal("0", thumb.GetAttribute("aria-valuemin"));
+        Assert.Equal("100", thumb.GetAttribute("aria-valuemax"));
+        thumb.KeyDown(Keys.ArrowUp);
+        Assert.Equal("30", cut.Find("[role=slider]").GetAttribute("aria-valuenow"));
+        cut.Find("[role=slider]").KeyDown(Keys.Home);
+        Assert.Equal("0", cut.Find("[role=slider]").GetAttribute("aria-valuenow"));
+    }
+
+    [Fact]
+    public void Slider_PointerPath_RecordsJsImport()
+    {
+        var cut = Render(Slider());
+        var import = Assert.Single(JSInterop.Invocations, invocation => invocation.Identifier == "import");
+        Assert.Equal(BaseSliderRoot.ModulePath, import.Arguments[0]);
+        Assert.Contains("track", cut.Markup);
+    }
+}

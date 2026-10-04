@@ -1,0 +1,19 @@
+@page "/components/rating"
+
+<PageTitle>Rating - BaseRz</PageTitle>
+
+<h1>Rating</h1>
+<p>Hover and arrow keys preview. Enter, Space, or click commits the rating.</p>
+
+<BaseRatingRoot @bind-Value="_rating" class="demo-rating" aria-label="Rating">
+    @for (var star = 1; star <= 5; star++)
+    {
+        var value = star;
+        <BaseRatingItem Value="value" class="demo-rating-item">★</BaseRatingItem>
+    }
+</BaseRatingRoot>
+<p class="mt-2">Value: <code>@_rating</code></p>
+
+@code {
+    private int _rating = 3;
+}

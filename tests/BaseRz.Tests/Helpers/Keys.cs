@@ -26,6 +26,8 @@ public static class Keys
 
     public static KeyboardEventArgs End => Create("End", "End");
 
+    public static KeyboardEventArgs Backspace => Create("Backspace", "Backspace");
+
     public static KeyboardEventArgs Character(char value) =>
         Create(value.ToString(), char.IsLetter(value) ? $"Key{char.ToUpperInvariant(value)}" : string.Empty);
 

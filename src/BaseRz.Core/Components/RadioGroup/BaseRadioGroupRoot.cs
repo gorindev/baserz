@@ -1,3 +1,4 @@
+using BaseRz.Core.Components.Form;
 using BaseRz.Core.Utilities;
 
 using Microsoft.AspNetCore.Components;
@@ -14,6 +15,8 @@ public class BaseRadioGroupRoot : BaseRzComponent
 {
     private readonly ControllableState<string?> _value = new(StringComparer.Ordinal);
     private BaseRadioGroupContext _context = default!;
+
+    [CascadingParameter] private BaseFieldContext? Field { get; set; }
 
     [Parameter] public string? Value { get; set; }
 
@@ -72,12 +75,13 @@ public class BaseRadioGroupRoot : BaseRzComponent
         }
 
         builder.AddDataDisabled(7, Disabled);
+        FieldAria.Apply(builder, 8, Field, HasAttribute, labelledBy: true);
 
-        builder.OpenComponent<CascadingValue<BaseRadioGroupContext>>(8);
-        builder.AddComponentParameter(9, "Value", _context);
-        builder.AddComponentParameter(10, "ChildContent", ChildContent);
+        builder.OpenComponent<CascadingValue<BaseRadioGroupContext>>(20);
+        builder.AddComponentParameter(21, "Value", _context);
+        builder.AddComponentParameter(22, "ChildContent", ChildContent);
         builder.CloseComponent();
-        builder.AddHiddenInput(11, Name, _value.Value);
+        builder.AddHiddenInput(23, Name, _value.Value);
         builder.CloseElement();
     }
 
@@ -90,6 +94,7 @@ public class BaseRadioGroupRoot : BaseRzComponent
 
         await _value.SetAsync(value);
         _context.Value = _value.Value;
+        Field?.NotifyEditContext();
         StateHasChanged();
     }
 }

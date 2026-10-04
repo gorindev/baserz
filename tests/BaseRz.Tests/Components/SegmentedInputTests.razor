@@ -1,0 +1,120 @@
+@inherits BaseRzTestContext
+
+@code {
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(Code());
+        Assert.Equal("group", cut.Find(".group").GetAttribute("role"));
+        Assert.Equal(4, cut.FindAll("input.slot").Count);
+        Assert.Equal("true", cut.Find(".sep").GetAttribute("aria-hidden"));
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(Code());
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "root", "group", "slot", "sep");
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(@<BaseSegmentedInputRoot id="root" data-test="probe" aria-label="Probe" Length="1">
+            <BaseSegmentedInputSlot id="slot" data-test="probe" aria-label="Probe" Index="0" />
+        </BaseSegmentedInputRoot>);
+        HeadlessAssert.AssertPassThrough(cut.Find("#root"), "root");
+        HeadlessAssert.AssertPassThrough(cut.Find("#slot"), "slot");
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var cut = Render(@<BaseSegmentedInputRoot Disabled Length="1">
+            <BaseSegmentedInputSlot Index="0" />
+        </BaseSegmentedInputRoot>);
+        Assert.True(cut.Find("input").HasAttribute("disabled"));
+        Assert.True(cut.Find("[data-disabled]") is not null);
+    }
+
+    [Fact]
+    public void Controlled_Bind()
+    {
+        var value = "";
+        var cut = Render<BaseSegmentedInputRoot>(parameters => parameters
+            .Add(p => p.Value, value)
+            .Add(p => p.ValueChanged, (string next) => value = next)
+            .Add(p => p.Length, 4)
+            .AddChildContent(Slots()));
+
+        cut.FindAll("input")[0].Input("1");
+        Assert.Equal("1", value);
+    }
+
+    [Fact]
+    public void Uncontrolled_Default()
+    {
+        var cut = Render<BaseSegmentedInputRoot>(parameters => parameters
+            .Add(p => p.DefaultValue, "12")
+            .Add(p => p.Length, 4)
+            .AddChildContent(Slots()));
+        cut.Render(parameters => parameters.Add(p => p.DefaultValue, "99"));
+        Assert.Equal("1", cut.FindAll("input")[0].GetAttribute("value"));
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        var value = "";
+        var cut = Render<BaseSegmentedInputRoot>(parameters => parameters
+            .Add(p => p.Value, value)
+            .Add(p => p.ValueChanged, (string next) => value = next)
+            .Add(p => p.Disabled, true)
+            .Add(p => p.Length, 2)
+            .AddChildContent(Slots()));
+        cut.Find("input").Input("9");
+        Assert.Equal("", value);
+    }
+
+    [Fact]
+    public void SegmentedInput_AutoAdvance_Paste_Backspace()
+    {
+        var value = "";
+        var cut = Render<BaseSegmentedInputRoot>(parameters => parameters
+            .Add(p => p.Value, value)
+            .Add(p => p.ValueChanged, (string next) => value = next)
+            .Add(p => p.Length, 4)
+            .Add(p => p.Name, "code")
+            .AddChildContent(Slots()));
+
+        cut.FindAll("input")[0].Input("12");
+        Assert.Equal("12", value);
+        cut.Render(parameters => parameters.Add(p => p.Value, value));
+        Assert.Equal("1", cut.FindAll("input")[0].GetAttribute("value"));
+        Assert.Equal("2", cut.FindAll("input")[1].GetAttribute("value"));
+
+        cut.FindAll("input")[1].KeyDown(Keys.Backspace);
+        Assert.Equal("1", value);
+        cut.Render(parameters => parameters.Add(p => p.Value, value));
+
+        Assert.Equal("code", cut.Find("input[type=hidden]").GetAttribute("name"));
+        Assert.Equal("1", cut.Find("input[type=hidden]").GetAttribute("value"));
+    }
+
+    private static RenderFragment Code() => @<BaseSegmentedInputRoot class="root" Length="4" DefaultValue="1">
+        <BaseSegmentedInputGroup class="group">
+            <BaseSegmentedInputSlot class="slot" Index="0" />
+            <BaseSegmentedInputSlot class="slot" Index="1" />
+            <BaseSegmentedInputSeparator class="sep" />
+            <BaseSegmentedInputSlot class="slot" Index="2" />
+            <BaseSegmentedInputSlot class="slot" Index="3" />
+        </BaseSegmentedInputGroup>
+    </BaseSegmentedInputRoot>;
+
+    private static RenderFragment Slots() => @<BaseSegmentedInputGroup>
+        <BaseSegmentedInputSlot Index="0" />
+        <BaseSegmentedInputSlot Index="1" />
+        <BaseSegmentedInputSlot Index="2" />
+        <BaseSegmentedInputSlot Index="3" />
+    </BaseSegmentedInputGroup>;
+}

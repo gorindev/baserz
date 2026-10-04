@@ -1,0 +1,26 @@
+@page "/components/segmented-input"
+
+<PageTitle>SegmentedInput - BaseRz</PageTitle>
+
+<h1>SegmentedInput</h1>
+<p>Typing advances to the next slot. Paste fills from the focused slot. Backspace clears and moves back.</p>
+
+<BaseSegmentedInputRoot @bind-Value="_code" Length="6" Name="code" class="demo-pin">
+    <BaseSegmentedInputGroup class="d-flex gap-2 align-items-center">
+        @for (var index = 0; index < 6; index++)
+        {
+            if (index == 3)
+            {
+                <BaseSegmentedInputSeparator class="text-muted">-</BaseSegmentedInputSeparator>
+            }
+
+            var slot = index;
+            <BaseSegmentedInputSlot Index="slot" aria-label="@($"Digit {slot + 1}")" class="form-control text-center" style="width:2.5rem" />
+        }
+    </BaseSegmentedInputGroup>
+</BaseSegmentedInputRoot>
+<p class="mt-2">Value: <code>@_code</code></p>
+
+@code {
+    private string _code = "";
+}

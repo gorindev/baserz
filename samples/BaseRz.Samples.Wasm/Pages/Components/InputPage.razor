@@ -1,0 +1,25 @@
+@page "/components/input"
+
+<PageTitle>Input - BaseRz</PageTitle>
+
+<h1>Input</h1>
+<p><code>BaseInputRoot</code> is a native input. Inside a field it takes the field id and validation ARIA.</p>
+
+<BaseFormRoot Model="_model" Context="form" class="demo-form">
+    <BaseField For="() => _model.Name">
+        <BaseFieldLabel class="fw-semibold">Name</BaseFieldLabel>
+        <BaseFieldControl Context="field">
+            <BaseInputRoot @bind-Value="_model.Name" Placeholder="Ada" class="form-control" />
+        </BaseFieldControl>
+    </BaseField>
+</BaseFormRoot>
+<p class="mt-2">Value: <code>@_model.Name</code></p>
+
+@code {
+    private readonly NameModel _model = new() { Name = "" };
+
+    private sealed class NameModel
+    {
+        public string? Name { get; set; }
+    }
+}

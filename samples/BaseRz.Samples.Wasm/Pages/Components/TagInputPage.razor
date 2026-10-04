@@ -1,0 +1,21 @@
+@page "/components/tag-input"
+
+<PageTitle>TagInput - BaseRz</PageTitle>
+
+<h1>TagInput</h1>
+<p>Enter adds a tag. Backspace on an empty input removes the last tag.</p>
+
+<BaseTagInputRoot @bind-Values="_tags" class="demo-tags">
+    @foreach (var tag in _tags)
+    {
+        <BaseTagInputTag Value="@tag" class="badge text-bg-secondary me-1">
+            @tag
+            <BaseTagInputTagRemove class="btn btn-sm btn-link">×</BaseTagInputTagRemove>
+        </BaseTagInputTag>
+    }
+    <BaseTagInputInput aria-label="Add tag" class="form-control d-inline-block w-auto" />
+</BaseTagInputRoot>
+
+@code {
+    private IReadOnlyList<string> _tags = ["red"];
+}

@@ -1,0 +1,97 @@
+@page "/components/form"
+@using System.ComponentModel.DataAnnotations
+@using BaseRz.Samples.Wasm.Validation
+@using FluentValidation
+
+<PageTitle>Form - BaseRz</PageTitle>
+
+<h1>Form</h1>
+<p>
+    <code>BaseFormRoot</code> wraps <code>EditForm</code>. Field state is on <code>BaseFieldControl</code>.
+    <code>BaseFieldErrorMessage Mode="All"</code> lists every message. Either
+    <code>DataAnnotationsValidator</code> or a FluentValidation adapter can fill the edit context.
+</p>
+
+<h2 class="h5">DataAnnotations</h2>
+<BaseFormRoot Model="_annotations" OnValidSubmit="() => _annotationsSaved = true" OnInvalidSubmit="() => _annotationsSaved = false" Context="form" class="demo-form">
+    <DataAnnotationsValidator />
+    <BaseField For="() => _annotations.Password">
+        <BaseFieldLabel class="fw-semibold">Password</BaseFieldLabel>
+        <BaseFieldControl Context="field" class="mb-2">
+            <BaseInputRoot @bind-Value="_annotations.Password" Type="password" class="form-control" />
+            <BaseFieldDescription class="small text-muted">At least 8 characters, one uppercase letter, and one digit.</BaseFieldDescription>
+            <BaseFieldErrorMessage Mode="BaseFieldErrorMode.All" class="text-danger small" />
+        </BaseFieldControl>
+    </BaseField>
+    <button type="submit" class="btn btn-primary" disabled="@form.IsSubmitting">Save</button>
+    <span class="ms-2 small">@(_annotationsSaved ? "Saved" : form.HasErrors ? "Invalid" : "Ready")</span>
+</BaseFormRoot>
+
+<h2 class="h5 mt-4">FluentValidation</h2>
+<BaseFormRoot Model="_fluent" OnValidSubmit="() => _fluentSaved = true" OnInvalidSubmit="() => _fluentSaved = false" Context="form" class="demo-form">
+    <FluentValidationValidator T="FluentAccount" Validator="_passwordValidator" />
+    <BaseField For="() => _fluent.Password" Required="true">
+        <BaseFieldLabel class="fw-semibold">Password</BaseFieldLabel>
+        <BaseFieldControl Context="field" class="mb-2">
+            <BaseInputRoot @bind-Value="_fluent.Password" Type="password" class="form-control" />
+            <BaseFieldDescription class="small text-muted">Same rules, validated with FluentValidation.</BaseFieldDescription>
+            <BaseFieldErrorMessage Mode="BaseFieldErrorMode.All" class="text-danger small" />
+        </BaseFieldControl>
+    </BaseField>
+    <button type="submit" class="btn btn-primary" disabled="@form.IsSubmitting">Save</button>
+    <span class="ms-2 small">@(_fluentSaved ? "Saved" : form.HasErrors ? "Invalid" : "Ready")</span>
+</BaseFormRoot>
+
+@code {
+    private readonly AnnotationsAccount _annotations = new();
+    private readonly FluentAccount _fluent = new();
+    private readonly PasswordValidator _passwordValidator = new();
+    private bool _annotationsSaved;
+    private bool _fluentSaved;
+
+    private sealed class AnnotationsAccount : IValidatableObject
+    {
+        public string? Password { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            var password = Password ?? "";
+            if (password.Length == 0)
+            {
+                yield return new ValidationResult("Password is required.", [nameof(Password)]);
+            }
+
+            if (password.Length < 8)
+            {
+                yield return new ValidationResult("At least 8 characters.", [nameof(Password)]);
+            }
+
+            if (!password.Any(char.IsUpper))
+            {
+                yield return new ValidationResult("One uppercase letter.", [nameof(Password)]);
+            }
+
+            if (!password.Any(char.IsDigit))
+            {
+                yield return new ValidationResult("One digit.", [nameof(Password)]);
+            }
+        }
+    }
+
+    private sealed class FluentAccount
+    {
+        public string Password { get; set; } = "";
+    }
+
+    private sealed class PasswordValidator : AbstractValidator<FluentAccount>
+    {
+        public PasswordValidator()
+        {
+            RuleFor(account => account.Password).Cascade(CascadeMode.Continue)
+                .NotEmpty().WithMessage("Password is required.")
+                .MinimumLength(8).WithMessage("At least 8 characters.")
+                .Matches("[A-Z]").WithMessage("One uppercase letter.")
+                .Matches("[0-9]").WithMessage("One digit.");
+        }
+    }
+}

@@ -1,4 +1,5 @@
 using BaseRz.Core.Components.CheckboxGroup;
+using BaseRz.Core.Components.Form;
 using BaseRz.Core.Utilities;
 
 using Microsoft.AspNetCore.Components;
@@ -22,6 +23,8 @@ public class BaseCheckboxRoot : BaseRzComponent
     private readonly ControllableState<bool> _indeterminate = new();
 
     [CascadingParameter] private BaseCheckboxGroupContext? Group { get; set; }
+
+    [CascadingParameter] private BaseFieldContext? Field { get; set; }
 
     [Parameter] public bool Checked { get; set; }
 
@@ -76,10 +79,11 @@ public class BaseCheckboxRoot : BaseRzComponent
         builder.AddDataDisabled(10, IsDisabled);
         builder.AddAttribute(11, "onclick", EventCallback.Factory.Create<MouseEventArgs>(this, ToggleAsync));
         builder.AddAttribute(12, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, HandleKeyDownAsync));
+        FieldAria.Apply(builder, 13, Field, HasAttribute, labelledBy: true);
 
-        builder.OpenComponent<CascadingValue<BaseCheckboxState>>(13);
-        builder.AddComponentParameter(14, "Value", new BaseCheckboxState(state, IsDisabled));
-        builder.AddComponentParameter(15, "ChildContent", ChildContent);
+        builder.OpenComponent<CascadingValue<BaseCheckboxState>>(20);
+        builder.AddComponentParameter(21, "Value", new BaseCheckboxState(state, IsDisabled));
+        builder.AddComponentParameter(22, "ChildContent", ChildContent);
         builder.CloseComponent();
         builder.CloseElement();
 
@@ -118,6 +122,7 @@ public class BaseCheckboxRoot : BaseRzComponent
             await _checked.SetAsync(next);
         }
 
+        Field?.NotifyEditContext();
         StateHasChanged();
     }
 }

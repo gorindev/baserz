@@ -1,0 +1,104 @@
+@inherits BaseRzTestContext
+
+@code {
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(@<BaseInputRoot class="root" aria-label="Name" />);
+        Assert.Equal("input", cut.Find("input.root").LocalName);
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(@<BaseInputRoot class="root" />);
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "root");
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(@<BaseInputRoot id="root" data-test="probe" aria-label="Probe" />);
+        HeadlessAssert.AssertPassThrough(cut.Find("input"), "root");
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var cut = Render(@<BaseInputRoot Disabled aria-label="Name" />);
+        Assert.True(cut.Find("input").HasAttribute("disabled"));
+        Assert.True(cut.Find("input").HasAttribute("data-disabled"));
+    }
+
+    [Fact]
+    public void Controlled_Bind()
+    {
+        var value = "a";
+        var cut = Render<BaseInputRoot>(parameters => parameters
+            .Add(p => p.Value, value)
+            .Add(p => p.ValueChanged, (string? next) => value = next)
+            .AddUnmatched("aria-label", "Name"));
+
+        cut.Find("input").Input("ab");
+        Assert.Equal("ab", value);
+        cut.Render(parameters => parameters.Add(p => p.Value, value));
+        Assert.Equal("ab", cut.Find("input").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void Uncontrolled_Default()
+    {
+        var cut = Render<BaseInputRoot>(parameters => parameters.Add(p => p.DefaultValue, "seed").AddUnmatched("aria-label", "Name"));
+        cut.Render(parameters => parameters.Add(p => p.DefaultValue, "other"));
+        Assert.Equal("seed", cut.Find("input").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        var value = "a";
+        var cut = Render<BaseInputRoot>(parameters => parameters
+            .Add(p => p.Value, value)
+            .Add(p => p.ValueChanged, (string? next) => value = next)
+            .Add(p => p.Disabled, true));
+
+        cut.Find("input").Input("b");
+        Assert.Equal("a", value);
+    }
+
+    [Fact]
+    public void Input_WiresFieldId_AriaInvalidDescribedBy()
+    {
+        var model = new RequiredName();
+        var cut = Render(@<BaseFormRoot Model="model" Context="form">
+            <DataAnnotationsValidator />
+            <BaseField For="() => model.Name">
+                <BaseFieldLabel>Name</BaseFieldLabel>
+                <BaseFieldControl Context="field">
+                    <BaseInputRoot @bind-Value="model.Name" />
+                    <BaseFieldDescription>Help</BaseFieldDescription>
+                    <BaseFieldErrorMessage />
+                </BaseFieldControl>
+            </BaseField>
+            <button type="submit">Save</button>
+        </BaseFormRoot>);
+
+        var input = cut.Find("input");
+        Assert.Equal(cut.Find("label").GetAttribute("for"), input.Id);
+        Assert.Contains("-description", input.GetAttribute("aria-describedby"));
+        Assert.Equal("true", input.GetAttribute("aria-required"));
+        Assert.Null(input.GetAttribute("aria-invalid"));
+
+        cut.Find("form").Submit();
+        input = cut.Find("input");
+        Assert.Equal("true", input.GetAttribute("aria-invalid"));
+        Assert.Contains("-error", input.GetAttribute("aria-describedby"));
+        Assert.Equal("alert", cut.Find("[role=alert]").GetAttribute("role"));
+    }
+
+    private sealed class RequiredName
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Name is required.")]
+        public string? Name { get; set; }
+    }
+}

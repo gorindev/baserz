@@ -1,0 +1,361 @@
+@using System.ComponentModel.DataAnnotations
+@using BaseRz.Tests.Components.Form
+@using FluentValidation
+@inherits BaseRzTestContext
+
+@code {
+    private readonly NameModel _name = new();
+    private readonly FluentAccount _fluent = new() { Password = "" };
+    private readonly PasswordValidator _passwordValidator = new();
+    private bool _showDescription = true;
+    private bool _showError = true;
+    private BaseFormRoot? _form;
+
+    [Fact]
+    public void Parts_Render()
+    {
+        var model = new NameModel { Name = "Ada" };
+        var cut = Render(@<BaseFormRoot Model="model" class="root" Context="form">
+            <BaseField For="() => model.Name" class="field">
+                <BaseFieldLabel class="label">Name</BaseFieldLabel>
+                <BaseFieldControl class="control" Context="field">
+                    <input class="probe" id="@field.Id" />
+                    <BaseFieldDescription class="description">Help</BaseFieldDescription>
+                    <BaseFieldErrorMessage class="error">Manual</BaseFieldErrorMessage>
+                </BaseFieldControl>
+            </BaseField>
+        </BaseFormRoot>);
+
+        var form = cut.Find("form.root");
+        Assert.Equal("Name", form.QuerySelector("label.label")!.TextContent);
+        Assert.Equal("Help", form.QuerySelector("p.description")!.TextContent);
+        Assert.Equal("alert", form.QuerySelector(".error")!.GetAttribute("role"));
+        Assert.Equal("Manual", form.QuerySelector(".error")!.TextContent);
+        Assert.NotNull(form.QuerySelector("div.control input.probe"));
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var model = new NameModel();
+        var cut = Render(@<BaseFormRoot Model="model" class="root" Context="form">
+            <BaseField For="() => model.Name" class="field">
+                <BaseFieldLabel class="label">Name</BaseFieldLabel>
+                <BaseFieldControl class="control" Context="field">
+                    <BaseFieldDescription class="description">Help</BaseFieldDescription>
+                    <BaseFieldErrorMessage class="error">Manual</BaseFieldErrorMessage>
+                </BaseFieldControl>
+            </BaseField>
+        </BaseFormRoot>);
+
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "root", "field", "label", "control", "description", "error");
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var model = new NameModel();
+        var cut = Render(@<BaseFormRoot Model="model" id="root" data-test="probe" aria-label="Probe" Context="form">
+            <BaseField For="() => model.Name" id="field" data-test="probe" aria-label="Probe">
+                <BaseFieldLabel id="label" data-test="probe" aria-label="Probe">Name</BaseFieldLabel>
+                <BaseFieldControl id="control" data-test="probe" aria-label="Probe" Context="field">
+                    <BaseFieldDescription id="description" data-test="probe" aria-label="Probe">Help</BaseFieldDescription>
+                    <BaseFieldErrorMessage id="error" data-test="probe" aria-label="Probe">Manual</BaseFieldErrorMessage>
+                </BaseFieldControl>
+            </BaseField>
+        </BaseFormRoot>);
+
+        HeadlessAssert.AssertPassThrough(cut.Find("form"), "root");
+        HeadlessAssert.AssertPassThrough(cut.Find("#field"), "field");
+        HeadlessAssert.AssertPassThrough(cut.Find("label"), "label");
+        HeadlessAssert.AssertPassThrough(cut.Find("#control"), "control");
+        HeadlessAssert.AssertPassThrough(cut.Find("#description"), "description");
+        HeadlessAssert.AssertPassThrough(cut.Find("#error"), "error");
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var model = new NameModel();
+        var cut = Render(@<BaseFormRoot Model="model" Context="form">
+            <DataAnnotationsValidator />
+            <BaseField For="() => model.Name">
+                <BaseFieldControl class="control" Context="field" />
+            </BaseField>
+            <button type="submit">Save</button>
+        </BaseFormRoot>);
+
+        Assert.Equal("valid", cut.Find("form").GetAttribute("data-state"));
+        Assert.Equal("valid", cut.Find(".control").GetAttribute("data-state"));
+        Assert.False(cut.Find("form").HasAttribute("data-invalid"));
+
+        cut.Find("form").Submit();
+        Assert.Equal("invalid", cut.Find("form").GetAttribute("data-state"));
+        Assert.True(cut.Find("form").HasAttribute("data-invalid"));
+        Assert.Equal("invalid", cut.Find(".control").GetAttribute("data-state"));
+        Assert.True(cut.Find(".control").HasAttribute("data-invalid"));
+    }
+
+    [Fact]
+    public void FormField_DescribedBy_IncludesDescriptionAndMessage()
+    {
+        var model = new AnnotationsAccount();
+        var cut = Render(@<BaseFormRoot Model="model" Context="form">
+            <DataAnnotationsValidator />
+            <BaseField For="() => model.Password">
+                <BaseFieldControl Context="field">
+                    <input class="probe" id="@field.Id" aria-describedby="@field.DescribedBy" aria-invalid="@field.AriaInvalid" />
+                    <BaseFieldDescription>Help</BaseFieldDescription>
+                    <BaseFieldErrorMessage Mode="BaseFieldErrorMode.All" />
+                </BaseFieldControl>
+            </BaseField>
+            <button type="submit">Save</button>
+        </BaseFormRoot>);
+
+        var input = cut.Find("input.probe");
+        Assert.Contains("-description", input.GetAttribute("aria-describedby"));
+        Assert.DoesNotContain("-error", input.GetAttribute("aria-describedby") ?? "");
+        Assert.Null(cut.FindAll("[role=alert]").FirstOrDefault());
+
+        cut.Find("form").Submit();
+        input = cut.Find("input.probe");
+        var describedBy = input.GetAttribute("aria-describedby");
+        Assert.Contains("-description", describedBy);
+        Assert.Contains("-error", describedBy);
+        var alert = cut.Find("[role=alert]");
+        Assert.Equal("ul", alert.LocalName);
+        Assert.Contains("At least 8 characters.", alert.TextContent);
+        Assert.Contains("One uppercase letter.", alert.TextContent);
+        Assert.Contains("One digit.", alert.TextContent);
+        Assert.Equal(4, alert.QuerySelectorAll("li").Length);
+    }
+
+    [Fact]
+    public void FormField_SingleMode_ShowsFirstMessageOnly()
+    {
+        var model = new AnnotationsAccount();
+        var cut = Render(@<BaseFormRoot Model="model" Context="form">
+            <DataAnnotationsValidator />
+            <BaseField For="() => model.Password">
+                <BaseFieldControl Context="field">
+                    <BaseFieldErrorMessage Mode="BaseFieldErrorMode.Single" />
+                </BaseFieldControl>
+            </BaseField>
+            <button type="submit">Save</button>
+        </BaseFormRoot>);
+
+        cut.Find("form").Submit();
+        var alert = cut.Find("[role=alert]");
+        Assert.Equal("div", alert.LocalName);
+        Assert.Equal("Password is required.", alert.TextContent);
+        Assert.Empty(alert.QuerySelectorAll("li"));
+    }
+
+    [Fact]
+    public void FormField_UnregistersDescribedBy_OnDispose()
+    {
+        _showDescription = true;
+        _showError = true;
+        var cut = Render(DescribedField());
+        var describedBy = cut.Find("input.probe").GetAttribute("aria-describedby");
+        Assert.Contains("-description", describedBy);
+        Assert.Contains("-error", describedBy);
+
+        cut.Find("button.hide").Click();
+        Assert.True(string.IsNullOrEmpty(cut.Find("input.probe").GetAttribute("aria-describedby")));
+    }
+
+    [Fact]
+    public void FormField_EditContext_SetsAriaInvalidAndRequired()
+    {
+        var model = new NameModel();
+        var cut = Render(@<BaseFormRoot Model="model" Context="form">
+            <DataAnnotationsValidator />
+            <BaseField For="() => model.Name">
+                <BaseFieldLabel>Name</BaseFieldLabel>
+                <BaseFieldControl Context="field">
+                    <input class="probe" id="@field.Id" aria-invalid="@field.AriaInvalid" aria-required="@field.AriaRequired" />
+                </BaseFieldControl>
+            </BaseField>
+            <button type="submit">Save</button>
+        </BaseFormRoot>);
+
+        var input = cut.Find("input.probe");
+        Assert.Equal(cut.Find("label").GetAttribute("for"), input.Id);
+        Assert.Equal("true", input.GetAttribute("aria-required"));
+        Assert.Null(input.GetAttribute("aria-invalid"));
+
+        cut.Find("form").Submit();
+        Assert.Equal("true", cut.Find("input.probe").GetAttribute("aria-invalid"));
+    }
+
+    [Fact]
+    public void Form_DataAnnotations_StateFlags()
+    {
+        var model = new NameModel();
+        var valid = 0;
+        var invalid = 0;
+        var cut = Render(@<BaseFormRoot Model="model" OnValidSubmit="() => valid++" OnInvalidSubmit="() => invalid++" Context="form">
+            <DataAnnotationsValidator />
+            <BaseField For="() => model.Name">
+                <BaseFieldControl Context="field">
+                    <InputText @bind-Value="model.Name" />
+                </BaseFieldControl>
+            </BaseField>
+            <button type="submit" disabled="@form.IsSubmitting">Save</button>
+        </BaseFormRoot>);
+
+        var form = cut.Find("form");
+        Assert.Equal("valid", form.GetAttribute("data-state"));
+        Assert.False(form.HasAttribute("data-modified"));
+        Assert.False(form.HasAttribute("data-invalid"));
+
+        cut.Find("input").Change("Ada");
+        Assert.True(cut.Find("form").HasAttribute("data-modified"));
+        Assert.True(cut.Find("[data-state]").HasAttribute("data-modified") || cut.Find("div").HasAttribute("data-modified"));
+
+        cut.Find("form").Submit();
+        Assert.Equal(1, valid);
+        Assert.Equal(0, invalid);
+        Assert.False(cut.Find("form").HasAttribute("data-submitting"));
+        Assert.False(cut.Find("form").HasAttribute("data-validating"));
+    }
+
+    [Fact]
+    public void Form_ValidateAsync_SetsIsValidating()
+    {
+        var model = new NameModel { Name = "Ada" };
+        var cut = Render(@<BaseFormRoot @ref="_form" Model="model" Context="form" ValidateAsync="Wait" OnValidSubmit="() => { }">
+            <button type="submit">Save</button>
+        </BaseFormRoot>);
+
+        cut.Find("form").Submit();
+        Assert.False(_form!.IsValidating);
+        Assert.False(_form.IsSubmitting);
+        Assert.False(cut.Find("form").HasAttribute("data-validating"));
+        Assert.False(cut.Find("form").HasAttribute("data-submitting"));
+
+        Task<bool> Wait(EditContext context, CancellationToken cancellationToken)
+        {
+            Assert.True(_form!.IsValidating);
+            Assert.True(_form.IsSubmitting);
+            return Task.FromResult(true);
+        }
+    }
+
+    [Fact]
+    public void Form_FluentValidation_MultiplePasswordErrors_RendersList()
+    {
+        var cut = Render(@<BaseFormRoot Model="_fluent" Context="form">
+            <TestFluentValidator T="FluentAccount" Validator="_passwordValidator" />
+            <BaseField For="() => _fluent.Password" Required="true">
+                <BaseFieldControl Context="field">
+                    <input class="probe" aria-required="@field.AriaRequired" aria-invalid="@field.AriaInvalid" />
+                    <BaseFieldErrorMessage Mode="BaseFieldErrorMode.All" />
+                </BaseFieldControl>
+            </BaseField>
+            <button type="submit">Save</button>
+        </BaseFormRoot>);
+
+        Assert.Equal("true", cut.Find("input.probe").GetAttribute("aria-required"));
+        cut.Find("form").Submit();
+        var items = cut.FindAll("[role=alert] li").Select(item => item.TextContent).ToArray();
+        Assert.Contains("Password is required.", items);
+        Assert.Contains("At least 8 characters.", items);
+        Assert.Contains("One uppercase letter.", items);
+        Assert.Contains("One digit.", items);
+        Assert.Equal("true", cut.Find("input.probe").GetAttribute("aria-invalid"));
+        Assert.Equal("invalid", cut.Find("form").GetAttribute("data-state"));
+    }
+
+    [Fact]
+    public void Form_OnSubmit_SkipsAutomaticValidation()
+    {
+        var model = new NameModel();
+        var submitted = 0;
+        var cut = Render(@<BaseFormRoot Model="model" Context="form" OnSubmit="() => submitted++">
+            <DataAnnotationsValidator />
+            <button type="submit">Save</button>
+        </BaseFormRoot>);
+
+        cut.Find("form").Submit();
+        Assert.Equal(1, submitted);
+        Assert.Equal("valid", cut.Find("form").GetAttribute("data-state"));
+        Assert.False(cut.Find("form").HasAttribute("data-invalid"));
+    }
+
+    private RenderFragment DescribedField() => @<BaseFormRoot Model="_name" Context="form">
+        <button class="hide" @onclick="HideDescribed">Hide</button>
+        <BaseField For="() => _name.Name">
+            <BaseFieldControl Context="field">
+                <input class="probe" id="@field.Id" aria-describedby="@field.DescribedBy" />
+                @if (_showDescription)
+                {
+                    <BaseFieldDescription>Help</BaseFieldDescription>
+                }
+                @if (_showError)
+                {
+                    <BaseFieldErrorMessage>Manual</BaseFieldErrorMessage>
+                }
+            </BaseFieldControl>
+        </BaseField>
+    </BaseFormRoot>;
+
+    private void HideDescribed()
+    {
+        _showDescription = false;
+        _showError = false;
+    }
+
+    private sealed class NameModel
+    {
+        [Required(ErrorMessage = "Name is required.")]
+        public string? Name { get; set; }
+    }
+
+    private sealed class AnnotationsAccount : IValidatableObject
+    {
+        public string? Password { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            var password = Password ?? "";
+            if (password.Length == 0)
+            {
+                yield return new ValidationResult("Password is required.", [nameof(Password)]);
+            }
+
+            if (password.Length < 8)
+            {
+                yield return new ValidationResult("At least 8 characters.", [nameof(Password)]);
+            }
+
+            if (!password.Any(char.IsUpper))
+            {
+                yield return new ValidationResult("One uppercase letter.", [nameof(Password)]);
+            }
+
+            if (!password.Any(char.IsDigit))
+            {
+                yield return new ValidationResult("One digit.", [nameof(Password)]);
+            }
+        }
+    }
+
+    private sealed class FluentAccount
+    {
+        public string Password { get; set; } = "";
+    }
+
+    private sealed class PasswordValidator : AbstractValidator<FluentAccount>
+    {
+        public PasswordValidator()
+        {
+            RuleFor(account => account.Password).Cascade(CascadeMode.Continue)
+                .NotEmpty().WithMessage("Password is required.")
+                .MinimumLength(8).WithMessage("At least 8 characters.")
+                .Matches("[A-Z]").WithMessage("One uppercase letter.")
+                .Matches("[0-9]").WithMessage("One digit.");
+        }
+    }
+}

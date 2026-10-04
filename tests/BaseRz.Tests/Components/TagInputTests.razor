@@ -1,0 +1,108 @@
+@inherits BaseRzTestContext
+
+@code {
+    private IReadOnlyList<string> _tags = ["red"];
+
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(Tags());
+        Assert.Equal("red", cut.Find(".tag").TextContent.Trim());
+        Assert.Equal("input", cut.Find("input.entry").LocalName);
+        Assert.Equal("Remove red", cut.Find("button.remove").GetAttribute("aria-label"));
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(Tags());
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "root", "tag", "remove", "entry");
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(@<BaseTagInputRoot id="root" data-test="probe" aria-label="Probe">
+            <BaseTagInputInput id="entry" data-test="probe" aria-label="Probe" />
+        </BaseTagInputRoot>);
+        HeadlessAssert.AssertPassThrough(cut.Find("#root"), "root");
+        HeadlessAssert.AssertPassThrough(cut.Find("#entry"), "entry");
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var cut = Render(@<BaseTagInputRoot Disabled>
+            <BaseTagInputInput />
+        </BaseTagInputRoot>);
+        Assert.True(cut.Find("input").HasAttribute("disabled"));
+        Assert.True(cut.Find("[data-disabled]") is not null);
+    }
+
+    [Fact]
+    public void Controlled_Bind()
+    {
+        _tags = ["red"];
+        var cut = Render(Tags());
+        cut.Find("input.entry").Input("blue");
+        cut.Find("input.entry").KeyDown(Keys.Enter);
+        Assert.Equal(["red", "blue"], _tags);
+    }
+
+    [Fact]
+    public void Uncontrolled_Default()
+    {
+        IReadOnlyList<string>? emitted = null;
+        var cut = Render<BaseTagInputRoot>(parameters => parameters
+            .Add(p => p.DefaultValues, new[] { "red", "blue" })
+            .Add(p => p.ValuesChanged, (IReadOnlyList<string> next) => emitted = next)
+            .AddChildContent(@<BaseTagInputInput class="entry" />));
+        cut.Render(parameters => parameters.Add(p => p.DefaultValues, new[] { "nope" }));
+        cut.Find("input.entry").KeyDown(Keys.Backspace);
+        Assert.Equal(["red"], emitted);
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        _tags = ["red"];
+        var cut = Render(@<BaseTagInputRoot Disabled Values="_tags" ValuesChanged="next => _tags = next">
+            <BaseTagInputInput class="entry" />
+        </BaseTagInputRoot>);
+        cut.Find("input").Input("blue");
+        cut.Find("input").KeyDown(Keys.Enter);
+        Assert.Equal(["red"], _tags);
+    }
+
+    [Fact]
+    public void TagInput_AddOnEnter_RemoveOnBackspaceEmpty_RemoveHasAccessibleName()
+    {
+        _tags = ["red"];
+        var cut = Render(Tags());
+        Assert.Equal("Remove red", cut.Find("button.remove").GetAttribute("aria-label"));
+
+        cut.Find("input.entry").Input("blue");
+        cut.Find("input.entry").KeyDown(Keys.Enter);
+        Assert.Equal(["red", "blue"], _tags);
+
+        _tags = ["red", "blue"];
+        cut = Render(Tags());
+        Assert.Equal("Remove blue", cut.FindAll("button.remove")[1].GetAttribute("aria-label"));
+        cut.Find("input.entry").KeyDown(Keys.Backspace);
+        Assert.Equal(["red"], _tags);
+
+        cut.Find("button.remove").Click();
+        Assert.Empty(_tags);
+    }
+
+    private RenderFragment Tags() => @<BaseTagInputRoot class="root" Values="_tags" ValuesChanged="next => _tags = next">
+        @foreach (var tag in _tags)
+        {
+            <BaseTagInputTag class="tag" Value="@tag">
+                @tag
+                <BaseTagInputTagRemove class="remove" />
+            </BaseTagInputTag>
+        }
+        <BaseTagInputInput class="entry" aria-label="Add tag" />
+    </BaseTagInputRoot>;
+}

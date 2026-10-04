@@ -1,3 +1,4 @@
+using BaseRz.Core.Components.Form;
 using BaseRz.Core.Utilities;
 
 using Microsoft.AspNetCore.Components;
@@ -16,6 +17,8 @@ public class BaseSwitchRoot : BaseRzComponent
     public const string UncheckedState = "unchecked";
 
     private readonly ControllableState<bool> _checked = new();
+
+    [CascadingParameter] private BaseFieldContext? Field { get; set; }
 
     [Parameter] public bool Checked { get; set; }
 
@@ -55,10 +58,11 @@ public class BaseSwitchRoot : BaseRzComponent
         builder.AddDataDisabled(10, Disabled);
         builder.AddAttribute(11, "onclick", EventCallback.Factory.Create<MouseEventArgs>(this, ToggleAsync));
         builder.AddAttribute(12, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, HandleKeyDownAsync));
+        FieldAria.Apply(builder, 13, Field, HasAttribute, labelledBy: true);
 
-        builder.OpenComponent<CascadingValue<BaseSwitchState>>(13);
-        builder.AddComponentParameter(14, "Value", new BaseSwitchState(on, Disabled));
-        builder.AddComponentParameter(15, "ChildContent", ChildContent);
+        builder.OpenComponent<CascadingValue<BaseSwitchState>>(20);
+        builder.AddComponentParameter(21, "Value", new BaseSwitchState(on, Disabled));
+        builder.AddComponentParameter(22, "ChildContent", ChildContent);
         builder.CloseComponent();
         builder.CloseElement();
 
@@ -79,6 +83,7 @@ public class BaseSwitchRoot : BaseRzComponent
         }
 
         await _checked.SetAsync(!_checked.Value);
+        Field?.NotifyEditContext();
     }
 }
 

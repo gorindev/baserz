@@ -1,0 +1,19 @@
+@page "/components/number-field"
+
+<PageTitle>NumberField - BaseRz</PageTitle>
+
+<h1>NumberField</h1>
+<p>Spinbutton. Up and Down step; Home and End jump to the ends of the range.</p>
+
+<BaseNumberFieldRoot @bind-Value="_count" Min="0" Max="10" Step="1" class="demo-number">
+    <BaseNumberFieldGroup class="input-group">
+        <BaseNumberFieldDecrement class="btn btn-outline-secondary">−</BaseNumberFieldDecrement>
+        <BaseNumberFieldInput aria-label="Count" class="form-control" />
+        <BaseNumberFieldIncrement class="btn btn-outline-secondary">+</BaseNumberFieldIncrement>
+    </BaseNumberFieldGroup>
+</BaseNumberFieldRoot>
+<p class="mt-2">Value: <code>@_count</code></p>
+
+@code {
+    private decimal? _count = 1;
+}

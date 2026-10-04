@@ -1,0 +1,113 @@
+@inherits BaseRzTestContext
+
+@code {
+    private static RenderFragment Stars(int value = 2) => @<BaseRatingRoot class="root" DefaultValue="value">
+        <BaseRatingItem class="i1" Value="1">1</BaseRatingItem>
+        <BaseRatingItem class="i2" Value="2">2</BaseRatingItem>
+        <BaseRatingItem class="i3" Value="3">3</BaseRatingItem>
+    </BaseRatingRoot>;
+
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(Stars());
+        Assert.Equal("radiogroup", cut.Find(".root").GetAttribute("role"));
+        Assert.Equal(3, cut.FindAll("[role=radio]").Count);
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(Stars());
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "root", "i1", "i2", "i3");
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(@<BaseRatingRoot id="root" data-test="probe" aria-label="Probe">
+            <BaseRatingItem id="item" data-test="probe" aria-label="Probe" Value="1" />
+        </BaseRatingRoot>);
+        HeadlessAssert.AssertPassThrough(cut.Find("#root"), "root");
+        HeadlessAssert.AssertPassThrough(cut.Find("#item"), "item");
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var cut = Render(@<BaseRatingRoot Disabled DefaultValue="1">
+            <BaseRatingItem Value="1">1</BaseRatingItem>
+        </BaseRatingRoot>);
+        Assert.True(cut.Find("[role=radiogroup]").HasAttribute("data-disabled"));
+        Assert.True(cut.Find("[role=radio]").HasAttribute("disabled"));
+        Assert.Equal("checked", cut.Find("[role=radio]").GetAttribute("data-state"));
+    }
+
+    [Fact]
+    public void Controlled_Bind()
+    {
+        var value = 1;
+        var cut = Render<BaseRatingRoot>(parameters => parameters
+            .Add(p => p.Value, value)
+            .Add(p => p.ValueChanged, (int next) => value = next)
+            .AddChildContent(Items()));
+
+        cut.FindAll("[role=radio]")[2].Click();
+        Assert.Equal(3, value);
+        cut.Render(parameters => parameters.Add(p => p.Value, value));
+        Assert.Equal("true", cut.FindAll("[role=radio]")[2].GetAttribute("aria-checked"));
+    }
+
+    [Fact]
+    public void Uncontrolled_Default()
+    {
+        var cut = Render<BaseRatingRoot>(parameters => parameters
+            .Add(p => p.DefaultValue, 2)
+            .AddChildContent(Items()));
+        cut.Render(parameters => parameters.Add(p => p.DefaultValue, 1));
+        Assert.Equal("true", cut.FindAll("[role=radio]")[1].GetAttribute("aria-checked"));
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        var value = 1;
+        var cut = Render<BaseRatingRoot>(parameters => parameters
+            .Add(p => p.Value, value)
+            .Add(p => p.ValueChanged, (int next) => value = next)
+            .Add(p => p.Disabled, true)
+            .AddChildContent(Items()));
+
+        cut.FindAll("[role=radio]")[2].Click();
+        Assert.Equal(1, value);
+    }
+
+    [Fact]
+    public void Rating_KeyboardAndHoverPreview_DoesNotCommitUntilActivate()
+    {
+        var value = 1;
+        var cut = Render<BaseRatingRoot>(parameters => parameters
+            .Add(p => p.Value, value)
+            .Add(p => p.ValueChanged, (int next) => value = next)
+            .AddChildContent(Items()));
+
+        var items = () => cut.FindAll("[role=radio]");
+        items()[0].KeyDown(Keys.ArrowRight);
+        Assert.Equal(1, value);
+        Assert.Equal("preview", items()[1].GetAttribute("data-state"));
+        Assert.Equal("true", items()[0].GetAttribute("aria-checked"));
+
+        items()[1].KeyDown(Keys.Enter);
+        Assert.Equal(2, value);
+
+        items()[2].TriggerEvent("onmouseenter", new MouseEventArgs());
+        Assert.Equal(2, value);
+        Assert.Equal("preview", items()[2].GetAttribute("data-state"));
+    }
+
+    private static RenderFragment Items() => @<text>
+        <BaseRatingItem Value="1">1</BaseRatingItem>
+        <BaseRatingItem Value="2">2</BaseRatingItem>
+        <BaseRatingItem Value="3">3</BaseRatingItem>
+    </text>;
+}

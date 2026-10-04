@@ -213,3 +213,68 @@ Parts: `BaseSwitchRoot` (`button`), `BaseSwitchThumb` (`span`).
 - `@bind-Checked` / `DefaultChecked`. Enter/Space toggle on non-native elements. `Required` sets `aria-required`.
 - Root and Thumb carry `data-state="checked|unchecked"`; `data-disabled` when disabled.
 - `Name` adds a hidden input with `Value` (default `on`) while on.
+
+---
+
+## P3 — Form and fields
+
+## BaseForm
+
+Parts: `BaseFormRoot` (`form`, via `EditForm`), `BaseField` (`div`), `BaseFieldLabel` (`label`), `BaseFieldControl` (`div`), `BaseFieldDescription` (`p`), `BaseFieldErrorMessage` (`div`, or `ul` when `Mode` is `All`).
+
+- `BaseFormRoot` composes `EditForm` and cascades form flags: `IsModified`, `IsSubmitting`, `IsValid`, `IsValidating`, `HasErrors`. The `<form>` mirrors them with `data-state="valid|invalid"`, `data-modified`, `data-submitting`, `data-validating`, and `data-invalid`.
+- Pass `Model` or `EditContext`, not both. `OnSubmit` skips automatic validation. Otherwise submit runs `EditContext.Validate()` (so `DataAnnotationsValidator` or any adapter subscribed to `OnValidationRequested` runs) and then `OnValidSubmit` or `OnInvalidSubmit`. `ValidateAsync` replaces `Validate()` when validation must be awaited; `IsValidating` is true for that call.
+- `IsValid` is the absence of validation messages, including before the first submit.
+- `BaseField For` identifies the model property. `BaseFieldControl` publishes the same flags for that field, plus `Id`, `DescribedBy`, `AriaInvalid`, and `AriaRequired` to its child content. `aria-required` follows `[Required]` or `Required="true"`.
+- Description and error ids are added to `aria-describedby` only while those parts are mounted and, for the error, only while a message or child content is showing. Disposing a part drops its id.
+- `BaseFieldErrorMessage Mode="Single"` (the default) is one `role="alert"` with the first message. `Mode="All"` is a `ul role="alert"` with one `li` per message, for rules such as a password policy.
+- `BaseInput`, `BaseNumberField`, and, when a field is cascading, checkbox, radio group, and switch copy the field id and ARIA onto themselves and call `NotifyFieldChanged` after the value commits.
+
+## BaseInput
+
+Parts: `BaseInputRoot` (`input`).
+
+- Native input. `@bind-Value` / `DefaultValue`. `Type` defaults to `text`.
+- Inside a field, the input uses the field id and `aria-invalid`, `aria-describedby`, and `aria-required` unless the caller set them. Changing the value notifies `EditContext`.
+- `data-disabled` when `Disabled`. Disabled and read-only inputs ignore edits.
+
+## BaseNumberField
+
+Parts: `BaseNumberFieldRoot` (`div`), `BaseNumberFieldGroup` (`div`), `BaseNumberFieldInput` (`input`), `BaseNumberFieldIncrement` (`button`), `BaseNumberFieldDecrement` (`button`).
+
+- The input is `role="spinbutton"` with `aria-valuemin`, `aria-valuemax`, and `aria-valuenow` when it has a value. It is not `type="number"`.
+- Up/Down add or subtract `Step`. Home and End set `Min` and `Max`. Values are clamped to that range and snapped to the step.
+- Increment and Decrement are named "Increment" and "Decrement" unless the caller sets `aria-label`.
+- `@bind-Value` / `DefaultValue` (`decimal?`). Notifies `EditContext` the same way an input does.
+
+## BaseSlider
+
+Parts: `BaseSliderRoot` (`div`), `BaseSliderTrack` (`div`), `BaseSliderRange` (`div`), `BaseSliderThumb` (`div`).
+
+- The thumb is `role="slider"` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-orientation`. Root has `data-orientation`.
+- Arrows step; Home and End jump to min and max. Disabled thumbs are not in the tab sequence.
+- Track and range are `aria-hidden`. Range size is an inline `width` or `height`.
+- Pointer capture is `slider.js` at `_content/BaseRz.JS/slider.js`.
+
+## BaseRating
+
+Parts: `BaseRatingRoot` (`div`), `BaseRatingItem` (`button`).
+
+- Root is `role="radiogroup"`. Each item is `role="radio"` with `aria-checked` for the committed value only.
+- Hover and arrow keys set `data-state="preview"` and do not change `Value`. Click, Enter, or Space commits. The committed item uses `data-state="checked"`.
+
+## BaseTagInput
+
+Parts: `BaseTagInputRoot` (`div`), `BaseTagInputInput` (`input`), `BaseTagInputTag` (`span`), `BaseTagInputTagRemove` (`button`).
+
+- Enter adds the input text as a tag and clears the input. Backspace on an empty input removes the last tag.
+- TagRemove's accessible name defaults to "Remove {value}".
+- `@bind-Values` / `DefaultValues`.
+
+## BaseSegmentedInput
+
+Parts: `BaseSegmentedInputRoot` (`div`), `BaseSegmentedInputGroup` (`div`), `BaseSegmentedInputSlot` (`input`), `BaseSegmentedInputSeparator` (`span`).
+
+- Slots share one string value. A character advances focus; paste fills from the focused slot; Backspace clears the slot or the previous one.
+- Group is `role="group"`. Separator is `aria-hidden`.
+- `Name` adds a hidden input with the combined value.

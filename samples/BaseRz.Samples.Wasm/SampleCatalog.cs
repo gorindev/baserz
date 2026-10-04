@@ -33,4 +33,15 @@ public static class SampleCatalog
         new("ToggleGroup", "components/toggle-group", "Single or multiple pressed buttons with roving focus."),
         new("TreeView", "components/tree-view", "Hierarchical tree with expand, collapse, and selection from the keyboard."),
     ];
+
+    public static IReadOnlyList<SampleEntry> P3 { get; } =
+    [
+        new("Form", "components/form", "EditForm wrapper with field state and a list of validation messages."),
+        new("Input", "components/input", "Native input wired to the surrounding field."),
+        new("NumberField", "components/number-field", "Spinbutton with step, min, and max."),
+        new("Rating", "components/rating", "Radio-like rating that previews before it commits."),
+        new("SegmentedInput", "components/segmented-input", "PIN slots with paste, auto-advance, and backspace."),
+        new("Slider", "components/slider", "Slider thumb with keyboard and pointer tracking."),
+        new("TagInput", "components/tag-input", "Tags added with Enter and removed from the keyboard."),
+    ];
 }

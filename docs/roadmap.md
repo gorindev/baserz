@@ -234,34 +234,34 @@ Port ShadRz field context; integrate with Blazor `EditContext`.
 | **BaseTagInput** (Root, Input, Tag, TagRemove) | **New** | Add/remove tags; Backspace on empty input; `aria-label` on remove. |
 | **BaseSegmentedInput** (Root, Group, Slot, Separator) | **New** | OTP/PIN slots; auto-advance, paste, Backspace. |
 
-- [ ] BaseForm
-- [ ] BaseInput
-- [ ] BaseNumberField
-- [ ] BaseSlider
-- [ ] BaseRating
-- [ ] BaseTagInput
-- [ ] BaseSegmentedInput
+- [x] BaseForm
+- [x] BaseInput
+- [x] BaseNumberField
+- [x] BaseSlider
+- [x] BaseRating
+- [x] BaseTagInput
+- [x] BaseSegmentedInput
 
 ### Tests (write first)
 
 Default red suite for each P3 component, plus:
 
-- [ ] `FormField_DescribedBy_IncludesDescriptionAndMessage`; Message `role="alert"` when invalid.
-- [ ] `FormField_UnregistersDescribedBy_OnDispose`.
-- [ ] `FormField_EditContext_SetsAriaInvalidAndRequired`.
-- [ ] `Input_WiresFieldId_AriaInvalidDescribedBy`.
-- [ ] `NumberField_Spinbutton_ArrowsHomeEnd_ClampMinMaxStep_AriaValuenow`.
-- [ ] `Slider_RoleSlider_KeyboardByOrientation`; pointer path covered with stubbed JS (invoke recorded).
-- [ ] `Rating_KeyboardAndHoverPreview_DoesNotCommitUntilActivate` (if hover preview is supported).
-- [ ] `TagInput_AddOnEnter_RemoveOnBackspaceEmpty_RemoveHasAccessibleName`.
-- [ ] `SegmentedInput_AutoAdvance_Paste_Backspace`.
+- [x] `FormField_DescribedBy_IncludesDescriptionAndMessage`; Message `role="alert"` when invalid.
+- [x] `FormField_UnregistersDescribedBy_OnDispose`.
+- [x] `FormField_EditContext_SetsAriaInvalidAndRequired`.
+- [x] `Input_WiresFieldId_AriaInvalidDescribedBy`.
+- [x] `NumberField_Spinbutton_ArrowsHomeEnd_ClampMinMaxStep_AriaValuenow`.
+- [x] `Slider_RoleSlider_KeyboardByOrientation`; pointer path covered with stubbed JS (invoke recorded).
+- [x] `Rating_KeyboardAndHoverPreview_DoesNotCommitUntilActivate` (if hover preview is supported).
+- [x] `TagInput_AddOnEnter_RemoveOnBackspaceEmpty_RemoveHasAccessibleName`.
+- [x] `SegmentedInput_AutoAdvance_Paste_Backspace`.
 
 ### Checks
 
-- [ ] `dotnet test` green; Form dispose test proves no stale `aria-describedby` ids.
-- [ ] `EditContext` notify covered for Input and NumberField.
-- [ ] Slider JS interop is in `BaseRz.JS` (`_content/BaseRz.JS/…`), not ShadRz paths.
-- [ ] Sample pages for all P3 components.
+- [x] `dotnet test` green; Form dispose test proves no stale `aria-describedby` ids.
+- [x] `EditContext` notify covered for Input and NumberField.
+- [x] Slider JS interop is in `BaseRz.JS` (`_content/BaseRz.JS/…`), not ShadRz paths.
+- [x] Sample pages for all P3 components.
 
 ---
 

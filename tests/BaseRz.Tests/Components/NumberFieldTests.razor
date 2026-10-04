@@ -1,0 +1,159 @@
+@inherits BaseRzTestContext
+
+@code {
+    private static RenderFragment Field(decimal? value = 1) => @<BaseNumberFieldRoot Value="value" Min="0" Max="10" Step="1" class="root">
+        <BaseNumberFieldGroup class="group">
+            <BaseNumberFieldDecrement class="dec" />
+            <BaseNumberFieldInput class="input" aria-label="Count" />
+            <BaseNumberFieldIncrement class="inc" />
+        </BaseNumberFieldGroup>
+    </BaseNumberFieldRoot>;
+
+    [Fact]
+    public void Parts_Render()
+    {
+        var cut = Render(Field());
+        Assert.NotNull(cut.Find(".group"));
+        Assert.Equal("spinbutton", cut.Find("input.input").GetAttribute("role"));
+        Assert.Equal("Increment", cut.Find("button.inc").GetAttribute("aria-label"));
+        Assert.Equal("Decrement", cut.Find("button.dec").GetAttribute("aria-label"));
+    }
+
+    [Fact]
+    public void CallerClass_Only()
+    {
+        var cut = Render(Field());
+        HeadlessAssert.AssertOnlyCallerClasses(cut.Markup, "root", "group", "dec", "input", "inc");
+    }
+
+    [Fact]
+    public void UnmatchedAttributes_PassThrough()
+    {
+        var cut = Render(@<BaseNumberFieldRoot id="root" data-test="probe" aria-label="Probe">
+            <BaseNumberFieldGroup id="group" data-test="probe" aria-label="Probe">
+                <BaseNumberFieldInput id="input" data-test="probe" aria-label="Probe" />
+            </BaseNumberFieldGroup>
+        </BaseNumberFieldRoot>);
+        HeadlessAssert.AssertPassThrough(cut.Find("#root"), "root");
+        HeadlessAssert.AssertPassThrough(cut.Find("#group"), "group");
+        HeadlessAssert.AssertPassThrough(cut.Find("#input"), "input");
+    }
+
+    [Fact]
+    public void DataState_And_Disabled()
+    {
+        var cut = Render(@<BaseNumberFieldRoot Disabled DefaultValue="1">
+            <BaseNumberFieldInput aria-label="Count" />
+            <BaseNumberFieldIncrement />
+        </BaseNumberFieldRoot>);
+        Assert.True(cut.Find("[role=spinbutton]").HasAttribute("disabled"));
+        Assert.True(cut.Find("button").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void Controlled_Bind()
+    {
+        decimal? value = 1;
+        var cut = Render<BaseNumberFieldRoot>(parameters => parameters
+            .Add(p => p.Value, value)
+            .Add(p => p.ValueChanged, (decimal? next) => value = next)
+            .Add(p => p.Min, 0)
+            .Add(p => p.Max, 10)
+            .Add(p => p.Step, 1)
+            .AddChildContent(FieldBody()));
+
+        cut.Find("[role=spinbutton]").KeyDown(Keys.ArrowUp);
+        Assert.Equal(2, value);
+        cut.Render(parameters => parameters.Add(p => p.Value, value));
+        Assert.Equal("2", cut.Find("[role=spinbutton]").GetAttribute("aria-valuenow"));
+    }
+
+    [Fact]
+    public void Uncontrolled_Default()
+    {
+        var cut = Render<BaseNumberFieldRoot>(parameters => parameters
+            .Add(p => p.DefaultValue, 3m)
+            .Add(p => p.Min, 0m)
+            .Add(p => p.Max, 10m)
+            .AddChildContent(@<BaseNumberFieldInput aria-label="Count" />));
+        cut.Render(parameters => parameters.Add(p => p.DefaultValue, 9m));
+        Assert.Equal("3", cut.Find("[role=spinbutton]").GetAttribute("aria-valuenow"));
+    }
+
+    [Fact]
+    public void Disabled_IgnoresInput()
+    {
+        decimal? value = 1;
+        var cut = Render<BaseNumberFieldRoot>(parameters => parameters
+            .Add(p => p.Value, value)
+            .Add(p => p.ValueChanged, (decimal? next) => value = next)
+            .Add(p => p.Disabled, true)
+            .AddChildContent(FieldBody()));
+
+        cut.Find("[role=spinbutton]").KeyDown(Keys.ArrowUp);
+        Assert.Equal(1, value);
+    }
+
+    [Fact]
+    public void NumberField_Spinbutton_ArrowsHomeEnd_ClampMinMaxStep_AriaValuenow()
+    {
+        decimal? value = 0;
+        var cut = Render<BaseNumberFieldRoot>(parameters => parameters
+            .Add(p => p.Value, value)
+            .Add(p => p.ValueChanged, (decimal? next) => value = next)
+            .Add(p => p.Min, 0m)
+            .Add(p => p.Max, 10m)
+            .Add(p => p.Step, 2m)
+            .AddChildContent(FieldBody()));
+
+        var input = () => cut.Find("[role=spinbutton]");
+        Assert.Equal("0", input().GetAttribute("aria-valuemin"));
+        Assert.Equal("10", input().GetAttribute("aria-valuemax"));
+        Assert.Equal("0", input().GetAttribute("aria-valuenow"));
+
+        input().KeyDown(Keys.ArrowUp);
+        cut.Render(parameters => parameters.Add(p => p.Value, value));
+        Assert.Equal(2, value);
+
+        input().KeyDown(Keys.End);
+        cut.Render(parameters => parameters.Add(p => p.Value, value));
+        Assert.Equal(10, value);
+
+        input().KeyDown(Keys.Home);
+        cut.Render(parameters => parameters.Add(p => p.Value, value));
+        Assert.Equal(0, value);
+
+        input().KeyDown(Keys.ArrowDown);
+        cut.Render(parameters => parameters.Add(p => p.Value, value));
+        Assert.Equal(0, value);
+    }
+
+    [Fact]
+    public void NumberField_NotifiesEditContext()
+    {
+        var model = new CountModel { Count = 1 };
+        var cut = Render(@<BaseFormRoot Model="model" Context="form">
+            <BaseField For="() => model.Count">
+                <BaseFieldControl Context="field">
+                    <BaseNumberFieldRoot @bind-Value="model.Count" Min="0" Max="10">
+                        <BaseNumberFieldInput />
+                    </BaseNumberFieldRoot>
+                </BaseFieldControl>
+            </BaseField>
+        </BaseFormRoot>);
+
+        cut.Find("[role=spinbutton]").KeyDown(Keys.ArrowUp);
+        Assert.True(cut.Find("form").HasAttribute("data-modified"));
+    }
+
+    private static RenderFragment FieldBody() => @<BaseNumberFieldGroup>
+        <BaseNumberFieldDecrement />
+        <BaseNumberFieldInput aria-label="Count" />
+        <BaseNumberFieldIncrement />
+    </BaseNumberFieldGroup>;
+
+    private sealed class CountModel
+    {
+        public decimal? Count { get; set; }
+    }
+}

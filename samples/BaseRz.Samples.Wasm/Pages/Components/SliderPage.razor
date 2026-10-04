@@ -1,0 +1,18 @@
+@page "/components/slider"
+
+<PageTitle>Slider - BaseRz</PageTitle>
+
+<h1>Slider</h1>
+<p>Arrow keys step the thumb. Pointer movement on the track uses <code>slider.js</code>.</p>
+
+<BaseSliderRoot @bind-Value="_volume" Min="0" Max="100" Step="1" class="demo-slider">
+    <BaseSliderTrack class="demo-slider-track">
+        <BaseSliderRange class="demo-slider-range" />
+    </BaseSliderTrack>
+    <BaseSliderThumb aria-label="Volume" class="demo-slider-thumb" />
+</BaseSliderRoot>
+<p class="mt-2">Value: <code>@_volume</code></p>
+
+@code {
+    private decimal _volume = 30;
+}
