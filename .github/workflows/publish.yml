@@ -1,0 +1,76 @@
+# Trusted publishing. nuget.org matches this file name (publish.yml), the repository,
+# and the release environment. Renaming the file requires a matching policy update.
+# NUGET_USER is the nuget.org profile name, not an email and not an API key.
+
+name: Publish NuGet
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Check NUGET_USER
+        env:
+          NUGET_USER: ${{ secrets.NUGET_USER }}
+        run: |
+          if [ -z "$NUGET_USER" ]; then
+            echo "Set the release environment secret NUGET_USER to the nuget.org profile name (not an email)."
+            exit 1
+          fi
+
+      - name: Test
+        run: dotnet test BaseRz.slnx -c Release
+
+      - name: Pack
+        env:
+          REPO_URL: https://github.com/${{ github.repository }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          dotnet pack src/BaseRz.JS/BaseRz.JS.csproj -c Release -o ./artifacts \
+            -p:Version="$VERSION" \
+            -p:RepositoryUrl="$REPO_URL" \
+            -p:PackageProjectUrl="$REPO_URL"
+          dotnet pack src/BaseRz.Core/BaseRz.Core.csproj -c Release -o ./artifacts \
+            -p:Version="$VERSION" \
+            -p:RepositoryUrl="$REPO_URL" \
+            -p:PackageProjectUrl="$REPO_URL"
+
+      - name: NuGet login
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push BaseRz.JS
+        run: >
+          dotnet nuget push ./artifacts/BaseRz.JS.*.nupkg
+          --api-key "${{ steps.login.outputs.NUGET_API_KEY }}"
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
+
+      - name: Push BaseRz.Core
+        run: >
+          dotnet nuget push ./artifacts/BaseRz.Core.*.nupkg
+          --api-key "${{ steps.login.outputs.NUGET_API_KEY }}"
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate

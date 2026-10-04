@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <Description>An unstyled, accessible, headless UI component library built for Blazor (WebAssembly, Server) and .NET MAUI Blazor Hybrid applications.</Description>
   </PropertyGroup>
 
 

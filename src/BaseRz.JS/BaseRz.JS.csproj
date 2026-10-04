@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <Description>JavaScript interop used by BaseRz.Core. Installed automatically with BaseRz.Core.</Description>
   </PropertyGroup>
 
 
